@@ -66,7 +66,7 @@ reason = "tulips: strong colours, old base-curve stack, masks"
 [[photo]]
 file = "_DSC3492.ARW"
 year = 2019
-reason = "aurora, 2019 vivid look over mountains"
+reason = "aurora, 2019 vivid look over mountains; small run-to-run render noise (keeps the tolerance honest)"
 
 [[photo]]
 file = "_DSC3735.ARW"
@@ -116,7 +116,7 @@ reason = "blue hour"
 [[photo]]
 file = "_DSC3286.ARW"
 year = 2019
-reason = "dim interior, ISO 1000, mixed colours"
+reason = "dim interior, ISO 1000, mixed colours; small run-to-run render noise (keeps the tolerance honest)"
 
 [[photo]]
 file = "_DSC6319 - _DSC6322.tif"

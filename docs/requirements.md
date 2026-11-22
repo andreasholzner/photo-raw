@@ -40,7 +40,6 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories              | Why here                                                                                   |
 |------|----------------------|--------------------------------------------------------------------------------------------|
-| 2    | US-2                 | Reference set and self-test are needed to compare pipelines and to judge every later rule  |
 | 3    | US-3, US-4           | New base pipeline and haze/clarity approach; the per-photo rules are fitted on top of them |
 | 4    | US-5, US-6           | Print sharpening moves to the export; rules validated on more edited photos                |
 | 5    | US-7 – US-10         | The tool's core: classify, safety, day and aurora edits                                    |
@@ -56,7 +55,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | ID                                                  | State | Story                               | Area                                            |
 |-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
 | [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
-| [US-2](#us-2--reference-set-and-self-test)          | 🚧     | Reference set and self-test         | [Foundation](#foundation)                       |
+| [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | 📋     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | 📋     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
@@ -98,7 +97,7 @@ attaching and detaching tags; loading a sidecar into the library.
 
 ### US-2 — Reference set and self-test
 
-**In progress 🚧** — As the owner, I want a fixed set of my edited photos with reference renders,
+**Done ✅** — As the owner, I want a fixed set of my edited photos with reference renders,
 so pipeline changes and darktable upgrades are checked instead of trusted.
 
 **Acceptance criteria:** The set covers day, mountain/haze, aurora, night and panorama photos and
@@ -106,9 +105,7 @@ is stored by file name and folder year only — no folder names in the repositor
 is configured. One command renders the set with the owner's edits and reports the difference to
 the reference per photo; differences within a tolerance (rendering noise) pass. Reference renders
 are made and kept on the owner's machine, outside the repository, in a configurable location.
-Intended changes become the new reference with one command. Once the tool makes automatic edits
-(US-9, US-10), the same check covers the tool's edits of the set, and automatic edits are blocked
-after a darktable upgrade until the self-test has run and its result was accepted.
+Intended changes become the new reference with one command.
 
 **Decisions:** US-2 → ADR-0004 (rendering is darktable's)
 
@@ -176,7 +173,10 @@ that was already right.
 I only correct outliers.
 
 **Acceptance criteria:** Base style plus exposure from the highlight rule (brightest 1 % at a
-target), validated by US-6. Photos where the rule is uncertain are flagged.
+target), validated by US-6. Photos where the rule is uncertain are flagged. The self-test (US-2)
+also checks the tool's edits of the reference set's day photos against the tool's previous
+output; intended changes become the new baseline. After a darktable upgrade, automatic edits
+are blocked until the self-test has run and its result was accepted.
 
 **Decisions:** US-9 → ADR-0004
 
@@ -188,7 +188,9 @@ colourful, not neon — so I can cull after editing.
 **Acceptance criteria:** Base style plus per-photo sky brightness and per-photo sky colour (the
 aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
 default and can be overridden per photo. The brightness target depends on the scene (e.g. a lit
-foreground gets a darker target). Variants for comparison are available.
+foreground gets a darker target). Variants for comparison are available. The self-test checks
+the tool's edits of the reference set's aurora photos like the day edits, and the upgrade block
+of US-9 applies.
 
 **Decisions:** US-10 → ADR-0004
 
