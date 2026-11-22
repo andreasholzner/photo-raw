@@ -29,7 +29,8 @@ and two tags, which the cleanup removes.
 
 1. Make a test folder with **copies** of three raws, e.g. `~/Pictures/photoflow-spike/`:
    one **edited** raw together with its `.xmp`, and two **unedited** raws (without `.xmp`).
-2. Install the script:
+2. Install the script (`~/.config/darktable/luarc` usually doesn't exist yet; darktable runs it
+   only if present, and the `echo` below creates it):
    ```sh
    mkdir -p ~/.config/darktable/lua
    cp photoflow_spike.lua ~/.config/darktable/lua/
@@ -53,8 +54,9 @@ and two tags, which the cleanup removes.
    copied history: `grep history_end ~/Pictures/photoflow-spike/*.xmp`.
 7. Start darktable again, press **6 clean up spike tags**, remove the test film roll from the
    library (remove, not delete), delete the test folder.
-8. Uninstall: delete the `require "photoflow_spike"` line from `~/.config/darktable/luarc` and
-   `~/.config/darktable/lua/photoflow_spike.lua`.
+8. Uninstall: delete `~/.config/darktable/lua/photoflow_spike.lua` and the
+   `require "photoflow_spike"` line from `~/.config/darktable/luarc` (or the whole file, if it
+   didn't exist before).
 
 ## What to report back
 
