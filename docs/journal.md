@@ -560,3 +560,13 @@ Log from the owner's run, plus their observations:
 - **Open:** the second background job (23:11:22) logged no end — if it was cancelled, the
   cancel path probably raised an error. Asked the owner whether they cancelled it and
   whether the UI stayed usable during the jobs.
+
+**Answers (same day):** the owner cancelled the second job and its progress bar disappeared;
+darktable stayed usable during both jobs. Cause of the missing "cancelled" log, reproduced in
+the container: after a cancel, reading `job.valid` works, but setting `job.percent` raises
+"Accessing an invalid job" — the cancel arrived during a step, the progress update threw and
+ended the function before the log line. → The real tool checks `job.valid` before every
+progress update.
+
+**US-1 result: passed.** Every capability the darktable-centric design needs works on the
+owner's darktable 5.6.1. ADR-0001 and ADR-0002 proposed for acceptance.
