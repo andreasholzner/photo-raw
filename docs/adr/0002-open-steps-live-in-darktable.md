@@ -1,6 +1,6 @@
 # ADR-0002 — Open steps live in darktable
 
-**Status:** accepted (2026-11-22)
+**Status:** proposed (2026-11-22) — accepted once US-1 confirms the Lua API can carry it
 
 ## Context
 
