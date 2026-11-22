@@ -570,3 +570,35 @@ progress update.
 
 **US-1 result: passed.** Every capability the darktable-centric design needs works on the
 owner's darktable 5.6.1. ADR-0001 and ADR-0002 proposed for acceptance.
+
+### 2026-11-22 — US-2: reference set and the first Rust code
+
+**Repository cleaned of trip folder names** (owner's wish): earlier journal entries rewritten
+with neutral terms (aurora night 1/2, aurora trip 3, years instead of places) in all commits.
+File names stay; they are harmless.
+
+**Reference set:** 30 photos chosen from a scan of all 2663 edited sidecars and checked on a
+contact sheet: 6 day photos of the current stack (incl. the two worst exposure-rule outliers),
+6 mountain/haze, 7 aurora, 5 night/twilight/edge cases, 3 panoramas, 4 scene-referred (filmic
+2023, sigmoid 2026). The owner dropped the kit-lens aurora (the kit lens won't be used for night
+shots again) and replaced a family photo with a dim interior (ISO 1000). Stored as file name +
+folder year in `data/reference-set.toml`.
+- **Correction:** the 30 s exposure at 10:30 on 1 January (listed as "daytime ND long exposure"
+  in the day/night entry) is polar-night twilight in Tromsø, not an ND shot — the EV rule
+  classified it correctly.
+- **File names are unique today** (2645 raws/panoramas, no duplicates), but the camera counter
+  (now ≈ _DSC8370) wraps after _DSC9999 and will repeat 2018 names → photos are identified by
+  file name + folder year; the tool must report ambiguities instead of guessing.
+
+**`photoflow selftest` (init / run / accept):** renders the set with darktable-cli (private copy
+of the owner's darktable configuration with sidecar writing disabled, in-memory library, sources
+via symlinks) to 1000 px 8-bit PNGs in `~/.local/share/photoflow/selftest/`, compares per photo
+(mean / 99th percentile / max difference in 8-bit levels; tolerance mean 1.0, p99 8 —
+configurable). First run in the container: 30 renders in 2:50 min, 28 MB.
+- Same darktable twice: all pass, but **renders are not bit-identical** — two photos show small
+  noise (mean 0.08–0.13, max up to 14 levels), so a tolerance is necessary.
+- With darktable 5.4.1 against 5.6.1 references: 5 of 30 flagged — the 2023 panorama TIFF
+  (mean 7.5 levels), fireworks (p99 41), dim interior, stars, one aurora — and the version change
+  is reported.
+- `darktable-cli` with an in-memory library doesn't write sidecars even with "write sidecar
+  files: on import" (163 renders, none written); the tool disables it anyway.

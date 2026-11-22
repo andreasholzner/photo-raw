@@ -1,0 +1,154 @@
+# Reference set for `photoflow selftest` (US-2).
+# Photos are found by file name below the configured photo root; `year` is the start of the
+# photo's folder name and only disambiguates repeated file names (camera counter wrap).
+# Folder names are intentionally not stored here.
+
+[[photo]]
+file = "_DSC6560.ARW"
+year = 2023
+reason = "day, current stack; exposure-rule outlier (-0.56 EV)"
+
+[[photo]]
+file = "_DSC6776.ARW"
+year = 2023
+reason = "day, exposure-rule outlier (+0.59 EV), filmic try, portrait format"
+
+[[photo]]
+file = "_DSC8015.ARW"
+year = 2025
+reason = "day, 2025 stack, retouch"
+
+[[photo]]
+file = "_DSC7382.ARW"
+year = 2024
+reason = "snow at dusk, gradient filter, masks"
+
+[[photo]]
+file = "_DSC6299.ARW"
+year = 2023
+reason = "bright snow (clipping), haze 0.4"
+
+[[photo]]
+file = "_DSC7873.ARW"
+year = 2024
+reason = "rocky peaks, retouch with masks"
+
+[[photo]]
+file = "_DSC5677.ARW"
+year = 2021
+reason = "mountain, haze 0.4, crop"
+
+[[photo]]
+file = "_DSC5028.ARW"
+year = 2021
+reason = "gorge with waterfall, gradient filter, old base-curve stack"
+
+[[photo]]
+file = "_DSC4805.ARW"
+year = 2020
+reason = "ridge in evening light, haze 0.4"
+
+[[photo]]
+file = "_DSC5719.ARW"
+year = 2021
+reason = "valley view, gradient filter"
+
+[[photo]]
+file = "_DSC6494.ARW"
+year = 2023
+reason = "stream with green foliage, colour balance"
+
+[[photo]]
+file = "_DSC1479.ARW"
+year = 2019
+reason = "tulips: strong colours, old base-curve stack, masks"
+
+[[photo]]
+file = "_DSC3492.ARW"
+year = 2019
+reason = "aurora, 2019 vivid look over mountains"
+
+[[photo]]
+file = "_DSC3735.ARW"
+year = 2019
+reason = "aurora, very bright green"
+
+[[photo]]
+file = "_DSC6085.ARW"
+year = 2022
+reason = "aurora with village lights, masks"
+
+[[photo]]
+file = "_DSC7371.ARW"
+year = 2024
+reason = "aurora, template of the aurora recipe"
+
+[[photo]]
+file = "_DSC7579.ARW"
+year = 2024
+reason = "weak aurora, 8 masks"
+
+[[photo]]
+file = "_DSC7305.ARW"
+year = 2024
+reason = "aurora over a lit foreground (tent, snow)"
+
+[[photo]]
+file = "_DSC0906.ARW"
+year = 2018
+reason = "night without aurora: stars and summit cross"
+
+[[photo]]
+file = "_DSC7319.ARW"
+year = 2024
+reason = "fireworks over a city"
+
+[[photo]]
+file = "_DSC7332.ARW"
+year = 2024
+reason = "polar-night twilight, 30 s"
+
+[[photo]]
+file = "_DSC0929.ARW"
+year = 2018
+reason = "blue hour"
+
+[[photo]]
+file = "_DSC3286.ARW"
+year = 2019
+reason = "dim interior, ISO 1000, mixed colours"
+
+[[photo]]
+file = "_DSC6319 - _DSC6322.tif"
+year = 2023
+reason = "panorama, wide snow scene"
+
+[[photo]]
+file = "_DSC3841 - _DSC3842_fused.tif"
+year = 2019
+reason = "panorama, exposure fusion, gradient filter"
+
+[[photo]]
+file = "_DSC8339 - _DSC8342.tif"
+year = 2026
+reason = "newest panorama"
+
+[[photo]]
+file = "_DSC6624.ARW"
+year = 2023
+reason = "scene-referred (filmic)"
+
+[[photo]]
+file = "_DSC8343.ARW"
+year = 2026
+reason = "scene-referred (sigmoid), gradient filter, crop"
+
+[[photo]]
+file = "_DSC8333.ARW"
+year = 2026
+reason = "scene-referred (sigmoid), haze 0.4, retouch with masks"
+
+[[photo]]
+file = "_DSC8328.ARW"
+year = 2026
+reason = "scene-referred (sigmoid), snowy mountains"

@@ -56,7 +56,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | ID                                                  | State | Story                               | Area                                            |
 |-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
 | [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
-| [US-2](#us-2--reference-set-and-self-test)          | 📋     | Reference set and self-test         | [Foundation](#foundation)                       |
+| [US-2](#us-2--reference-set-and-self-test)          | 🚧     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | 📋     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | 📋     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
@@ -98,12 +98,17 @@ attaching and detaching tags; loading a sidecar into the library.
 
 ### US-2 — Reference set and self-test
 
-**Planned 📋** — As the owner, I want a fixed set of my edited photos with reference renders, so
-pipeline changes and darktable upgrades are checked instead of trusted.
+**In progress 🚧** — As the owner, I want a fixed set of my edited photos with reference renders,
+so pipeline changes and darktable upgrades are checked instead of trusted.
 
-**Acceptance criteria:** The set covers day, mountain/haze, aurora and panorama photos. One command
-renders the set and reports the difference to the references per photo. After a darktable
-upgrade automatic edits are blocked until the self-test has run and its result was accepted.
+**Acceptance criteria:** The set covers day, mountain/haze, aurora, night and panorama photos and
+is stored by file name and folder year only — no folder names in the repository; the photo root
+is configured. One command renders the set with the owner's edits and reports the difference to
+the reference per photo; differences within a tolerance (rendering noise) pass. Reference renders
+are made and kept on the owner's machine, outside the repository, in a configurable location.
+Intended changes become the new reference with one command. Once the tool makes automatic edits
+(US-9, US-10), the same check covers the tool's edits of the set, and automatic edits are blocked
+after a darktable upgrade until the self-test has run and its result was accepted.
 
 **Decisions:** US-2 → ADR-0004 (rendering is darktable's)
 
