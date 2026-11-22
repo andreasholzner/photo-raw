@@ -3,8 +3,10 @@
 Planning notes from a brainstorm (2026-11-11 to 2026-11-19), continued as a journal during
 the exploration (2026-11-21/22). Since 2026-11-22 this is a real project: features live in
 [requirements.md](requirements.md), decisions in [adr/](adr/), links in [links.md](links.md).
-The sections above "Journal" are the state at the switch and are not maintained further; the
-journal keeps recording analyses and findings, newest entry last.
+The sections above "Journal" are the state at the switch and are not maintained further. The
+journal only records what isn't tracked elsewhere and has future value — experiments,
+analyses, brainstorming — newest entry last. Story progress, decisions and usage live in
+requirements.md, the ADRs, the code and the README.
 
 ## Goal
 
