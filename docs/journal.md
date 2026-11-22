@@ -541,3 +541,22 @@ Spike script and guide: `spikes/us-1-lua/`. Tested in the container with darktab
   `apply_sidecar` (in the container it didn't, but darktable was killed, not quit). If it
   doesn't, sidecar files can lag behind the library — acceptable under ADR-0001 (the library
   is the home of the state) but to be kept in mind.
+
+### 2026-11-22 — US-1: spike on the owner's machine (darktable 5.6.1, Manjaro)
+
+Log from the owner's run, plus their observations:
+- **Confirmed:** panel; import events for both a non-test folder (correctly not tagged —
+  the safety check on the folder name works) and the test folder; EXIF/EV100; tags as
+  to-dos, collection by tag and restore, detach; background job (10 s, finished);
+  `apply_sidecar` — the image changed visibly, history in darkroom; `is_altered`.
+- **Sidecar file lags the library:** the target's `.xmp` still had `history_end=0` 5 s after
+  `apply_sidecar`, and 16 about 2½ minutes later. darktable writes sidecars in the background
+  → the tool must not expect a sidecar to reflect a change it just applied; the library is
+  the source of truth (ADR-0001).
+- **Locale:** Lua's `string.format("%.1f")` printed `8,0` (German locale) → numbers exchanged
+  between the Lua layer and the CLI need locale-independent formatting.
+- **Panel UI** is not suited for long log lines; the real panel shows a short list of open
+  steps and buttons, details go to a log file.
+- **Open:** the second background job (23:11:22) logged no end — if it was cancelled, the
+  cancel path probably raised an error. Asked the owner whether they cancelled it and
+  whether the UI stayed usable during the jobs.
