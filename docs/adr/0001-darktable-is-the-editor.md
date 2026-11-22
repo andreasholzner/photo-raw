@@ -1,6 +1,6 @@
 # ADR-0001 — darktable is the editor and holds the photo state
 
-**Status:** proposed (2026-11-22) — accepted once US-1 confirms the Lua API can carry it
+**Status:** accepted (2026-11-22, confirmed by US-1)
 
 ## Context
 

@@ -94,7 +94,7 @@ a limit or workaround for, each of: reacting to an import; a side panel with a l
 running an external command in the background with progress while the UI stays usable;
 attaching and detaching tags; loading a sidecar into the library.
 
-**Decisions:** US-1 → ADR-0001, ADR-0002 (proposed; accepted or revised by the outcome)
+**Decisions:** US-1 → ADR-0001, ADR-0002 (accepted on its outcome)
 
 ### US-2 — Reference set and self-test
 
