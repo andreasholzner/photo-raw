@@ -519,3 +519,25 @@ User answers on the plan review:
 The throwaway Python scripts stay local in `experiments/` (git-ignored): they point to the
 session scratchpad and aren't part of the tool (ADR-0005). Findings and numbers live in this
 journal.
+
+### 2026-11-22 — US-1: Lua spike, first results in the container
+
+Spike script and guide: `spikes/us-1-lua/`. Tested in the container with darktable 5.6.1
+(Lua API 9.7.0) under a virtual display (Xvfb), throwaway config and library, copies of 3 raws
+(one edited, two unedited), driven by an unattended self-check mode of the script.
+
+- **Works:** panel in the lighttable; `post-import-image` / `post-import-film` events; EXIF
+  exposure/aperture/ISO (EV100 14.0 for the day raw, −2.0 for the aurora raws); creating,
+  attaching, detaching, deleting tags; filtering the collection to a tag and restoring it;
+  `is_altered` tells edited from unedited images; `dt.control.dispatch` + `dt.control.execute`
+  run a 10 s external command with a progress job; **`apply_sidecar` of a file written
+  outside darktable puts the full history into the library** (verified in library.db: 16
+  history items).
+- **API facts learned:** no Lua call to write sidecars (darktable writes them itself, 5.6
+  asynchronously); no Lua call to quit darktable; the bundled lua-scripts in 5.6.1 (official,
+  contrib, examples) are good references for current API usage.
+- **Open, needs the owner's machine:** UI responsiveness during the background job and
+  cancelling; looks of the panel; whether darktable rewrites the target's `.xmp` after
+  `apply_sidecar` (in the container it didn't, but darktable was killed, not quit). If it
+  doesn't, sidecar files can lag behind the library — acceptable under ADR-0001 (the library
+  is the home of the state) but to be kept in mind.

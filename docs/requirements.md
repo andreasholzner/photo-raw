@@ -56,7 +56,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 
 | ID                                                  | State | Story                               | Area                                            |
 |-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
-| [US-1](#us-1--lua-spike-in-darktable)               | 📋     | Lua spike in darktable              | [Foundation](#foundation)                       |
+| [US-1](#us-1--lua-spike-in-darktable)               | 🚧     | Lua spike in darktable              | [Foundation](#foundation)                       |
 | [US-2](#us-2--reference-set-and-self-test)          | 📋     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | 📋     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | 📋     | Haze and clarity                    | [Foundation](#foundation)                       |
@@ -87,7 +87,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 
 ### US-1 — Lua spike in darktable
 
-**Planned 📋** — As the owner, I want proof that darktable's Lua API can carry the integration
+**In progress 🚧** — As the owner, I want proof that darktable's Lua API can carry the integration
 before the tool is built around it.
 
 **Acceptance criteria:** On the owner's darktable 5.6.1 a small script demonstrates, or documents
