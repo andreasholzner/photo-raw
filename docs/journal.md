@@ -604,3 +604,29 @@ configurable). First run in the container: 30 renders in 2:50 min, 28 MB.
   is reported.
 - `darktable-cli` with an in-memory library doesn't write sidecars even with "write sidecar
   files: on import" (163 renders, none written); the tool disables it anyway.
+
+### 2026-11-23 — Experiment: research-based aurora edit vs. the current recipe
+
+Two aurora-trip-3 photos (_DSC8300, _DSC8305), darktable 5.6.1, full size. Same per-photo
+targets for both edits (sky median 0.15, sky background B), so only the recipe differs.
+- **Current recipe** (from the owner's old aurora edits): display-referred, "Kontrast – hoch"
+  curve, raw denoise minimal + chroma-only denoise, haze removal, local contrast twice,
+  highpass, colour balance rgb pushed (chroma +0.20, saturation +0.12, vibrance +0.15).
+- **Research recipe:** modules of a finished 2026 scene-referred edit (exposure, sigmoid
+  "scene-referred default", profiled denoise luma + chroma), the owner's 12mm lens preset,
+  built-in "basic colorfulness | standard", local contrast "clarity" once; no haze removal,
+  no tone curve, no sharpening (print sharpening belongs in the export, US-5).
+- **Variant with foreground filter:** built-in tinted purple graduated filter, density 0.6 EV,
+  rotated to the bottom, as a crude stand-in for a drawn foreground mask.
+
+**Result** (side by side incl. 100 % crops in `photo-edits/_research/`):
+- **Noise:** by far the biggest difference. The current recipe is heavily noisy at full size
+  (chroma-only denoise, then haze + 2× local contrast + highpass amplify it); the research
+  recipe is clean at 100 %.
+- **Colour:** research recipe is more natural — aurora softer green, snow neutral to blue
+  instead of green — but also visibly less vivid; for "how it felt" it probably needs more
+  colour (e.g. the "vibrant colors" preset).
+- **Stars:** fainter with luminance denoise — the owner liked the stars in _DSC8300.
+- **Foreground filter:** helps the green snow in _DSC8300, overdone (purple) in _DSC8305 →
+  a fixed filter is too crude; per-photo strength or a proper mask needed.
+- 8300 without filter hit the WB blue clamp (3.0): background B/G 1.24 instead of 1.35.
