@@ -680,3 +680,13 @@ per-pixel max−min, midtones = median luminance):
   too much (deep blue skies, neon greens).
 - Matched on midtones, AgX is no longer too bright; base stays flat and dull, punchy comes
   close to the owner's colourfulness with a softer contrast — the candidate for backlit scenes.
+- **Owner's verdict on round 2:** extra chroma too much; AgX base always too dull. The two good
+  candidates — sigmoid ACES + "vibrant colors" and AgX punchy (midtones matched) — are very
+  near the owner's edits, and which is better depends on the scene:
+  - darker scenes → AgX punchy (dark parts brighter);
+  - winter/snow → sigmoid (AgX punchy too dark there);
+  - the few strongly backlit examples → sigmoid ACES + vibrant (contrary to the earlier
+    impression that AgX wins in backlight);
+  - _DSC6560 (green mountain lake) and _DSC6494 (stream, green foliage) → AgX punchy;
+    sigmoid + vibrant comes out too colourful there;
+  - tulips: no candidate comes close to the owner's edit — accepted as an exception.
