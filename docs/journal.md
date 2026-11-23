@@ -651,3 +651,32 @@ Candidates: sigmoid "scene-referred default", sigmoid "ACES 100-nit like", AgX
   washed out, punchy better. Matching AgX on midtones instead would be the fairer test.
 - In the 2026 edits sigmoid sits together with a "Kontrast – mittel" tone curve; sigmoid
   alone (ACES-like) already reaches a similar contrast.
+- **Owner's verdict on round 1:** AgX flat and very bright in general, but in backlit scenes
+  ("Gegenlicht") better than any alternative; for normal light sigmoid ACES-like is the best
+  new option. The owner's edits have more punch (saturation), wanted for print because paper
+  dulls colours.
+- **Bug in round 1:** a second instance of a module (e.g. a second gradient filter or exposure)
+  is ignored by darktable unless the sidecar carries an explicit `iop_order_list` containing it
+  → _DSC5028 and _DSC8343 lost instances in round 1. Fixed in round 2 by always writing the
+  complete order list (from a 2026 edit) with extra instances inserted after their module.
+
+### 2026-11-23 — US-3, round 2: saturation for sigmoid, AgX matched on midtones
+
+Same 16 photos; sheets `photo-edits/_us3/round2_sheet_1..4.png`, columns: owner's edit,
+sigmoid ACES, + colour balance rgb "basic colorfulness | vibrant colors", + the same with
+chroma +0.25, AgX base and AgX punchy with exposure matched on the owner's median luminance.
+Colourfulness relative to the owner's edits (mean over photos; median / 90th percentile of
+per-pixel max−min, midtones = median luminance):
+
+| | colour (median) | colour (90th pct.) | midtones |
+|---|---|---|---|
+| sigmoid ACES | ×1.08 | ×0.92 | ×1.08 |
+| + vibrant colors | ×1.40 | ×1.11 | ×1.07 |
+| + vibrant + chroma 0.25 | ×1.76 | ×1.41 | ×1.06 |
+| AgX base, midtones matched | ×0.86 | ×0.68 | ×1.00 |
+| AgX punchy, midtones matched | ×1.35 | ×1.06 | ×0.99 |
+
+- Sigmoid ACES + "vibrant colors" is closest to the owner's punch; the extra chroma is clearly
+  too much (deep blue skies, neon greens).
+- Matched on midtones, AgX is no longer too bright; base stays flat and dull, punchy comes
+  close to the owner's colourfulness with a softer contrast — the candidate for backlit scenes.
