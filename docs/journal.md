@@ -630,3 +630,6 @@ targets for both edits (sky median 0.15, sky background B), so only the recipe d
 - **Foreground filter:** helps the green snow in _DSC8300, overdone (purple) in _DSC8305 →
   a fixed filter is too crude; per-photo strength or a proper mask needed.
 - 8300 without filter hit the WB blue clamp (3.0): background B/G 1.24 instead of 1.35.
+- **Owner's verdict:** noise better, but the remaining noise is coarser-grained, and the aurora
+  loses much of its structure compared to the current recipe. Interesting, but no quick win;
+  parked.

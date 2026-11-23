@@ -56,7 +56,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 |-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
 | [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
 | [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
-| [US-3](#us-3--modern-base-pipeline)                 | 📋     | Modern base pipeline                | [Foundation](#foundation)                       |
+| [US-3](#us-3--modern-base-pipeline)                 | 🚧     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | 📋     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
@@ -111,7 +111,7 @@ Intended changes become the new reference with one command.
 
 ### US-3 — Modern base pipeline
 
-**Planned 📋** — As the owner, I want my base edits on darktable's current scene-referred
+**In progress 🚧** — As the owner, I want my base edits on darktable's current scene-referred
 approach instead of the display-referred stack I kept out of habit.
 
 **Acceptance criteria:** One display transform (sigmoid, AgX or filmic), no additional contrast
