@@ -633,3 +633,21 @@ targets for both edits (sky median 0.15, sky background B), so only the recipe d
 - **Owner's verdict:** noise better, but the remaining noise is coarser-grained, and the aurora
   loses much of its structure compared to the current recipe. Interesting, but no quick win;
   parked.
+
+### 2026-11-23 — US-3, round 1: one display transform instead of the display-referred stack
+
+16 day/mountain photos of the reference set (incl. the 4 already scene-referred ones),
+darktable 5.6.1. Each owner edit with its tone mapping removed (base curve, tone/rgb curve,
+filmic, sigmoid, colisa) and exactly one display transform added, iop order v4; exposure
+solved so that the brightest 1 % lands where it does in the owner's edit (the exposure rule).
+Candidates: sigmoid "scene-referred default", sigmoid "ACES 100-nit like", AgX
+"blender-like|base", AgX "blender-like|punchy". Sheets: `photo-edits/_us3/sheet_1..4.png`
+(columns: owner's edit, then the four candidates).
+- **Sigmoid (both presets): close to the owner's look**, typically +0.3 … +1.8 EV more
+  exposure for the same highlights and slightly brighter midtones; ACES-like a bit more
+  contrast. Old photos lose the colisa saturation boost (tulips visibly duller).
+- **AgX at the same highlight placement: flat and bright** (median luminance +0.1 … +0.25,
+  EV +1.2 … +3.8) — its strong highlight roll-off means the p99 rule pushes it too far; base
+  washed out, punchy better. Matching AgX on midtones instead would be the fairer test.
+- In the 2026 edits sigmoid sits together with a "Kontrast – mittel" tone curve; sigmoid
+  alone (ACES-like) already reaches a similar contrast.
