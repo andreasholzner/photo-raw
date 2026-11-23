@@ -690,3 +690,18 @@ per-pixel max−min, midtones = median luminance):
   - _DSC6560 (green mountain lake) and _DSC6494 (stream, green foliage) → AgX punchy;
     sigmoid + vibrant comes out too colourful there;
   - tulips: no candidate comes close to the owner's edit — accepted as an exception.
+
+### 2026-11-23 — US-3: can a rule predict the owner's look choice?
+
+Owner's picks (round-2 sheets, row by row): 1: A S S S, 2: S S S A, 3: A S A –, 4: A S A S
+(A = AgX punchy, S = sigmoid ACES + vibrant colors, – = tulips, none fits) → 9 × S, 6 × A.
+
+Measured per photo: snow share (bright, low-chroma pixels), dark share, green share, luminance
+quartiles of the owner's edit; share of strongly coloured pixels in the sigmoid + vibrant render.
+- **No single feature separates the picks.** The expected "too colourful → AgX" doesn't hold as
+  measured: the photos with the most strongly coloured pixels in the sigmoid version (mostly
+  blue sky) were picked S.
+- Best simple candidate: **S if snow share > 0.14 or strong-colour share > 0.14, else A** →
+  12 of 15 right (misses: _DSC5677, _DSC5719 picked S; _DSC4805, bright rock, picked A).
+  Reading: blue-sky and snow scenes → sigmoid; scenes dominated by foliage, rock or shade →
+  AgX. Thresholds fitted on the same 15 photos → not validated; needs more labelled photos.

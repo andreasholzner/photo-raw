@@ -114,10 +114,13 @@ Intended changes become the new reference with one command.
 **In progress 🚧** — As the owner, I want my base edits on darktable's current scene-referred
 approach instead of the display-referred stack I kept out of habit.
 
-**Acceptance criteria:** One display transform (sigmoid, AgX or filmic), no additional contrast
-curve on top. Candidates are compared side by side on the reference set (day and aurora) and the
-owner picks. Results are a day and an aurora base style; the per-photo rules (US-9, US-10) are
-re-fitted to the new pipeline.
+**Acceptance criteria:** One display transform per photo, no additional contrast curve on top.
+Candidates are compared side by side on the reference set and the owner picks. For day photos
+there are two looks, chosen per photo: sigmoid "ACES 100-nit like" with colour balance rgb
+"vibrant colors", and AgX "punchy" (exposure matched on the midtones). A rule proposes the look,
+the owner can switch it, and the owner's choices are kept as data to improve the rule. The
+aurora base is decided separately. The per-photo exposure rules (US-9, US-10) are re-fitted to
+the new looks.
 
 ### US-4 — Haze and clarity
 
