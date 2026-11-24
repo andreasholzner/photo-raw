@@ -735,3 +735,24 @@ default", local contrast "clarity".
   dehaze separates distant layers from each other and the sky and thins the blue veil;
   clarity crisps texture (rock, foliage) but leaves the distant haze; combined, the effects
   add up without halos or visible noise at 100 %.
+
+### 2026-11-24 — US-5: print sharpening in the export style? Double sharpening
+
+The "Fotobuch" export preset: JPEG, full size, high quality, 300 dpi, style "Aufhellung Druck"
+(one tone curve instance) applied in append mode. Test on _DSC8015 (edited with sharpen
+"mehr schärfen"), sharpness = mean absolute Laplacian of luminance at 2000 px:
+- today (edit + "Aufhellung Druck"): 0.057; edit without its sharpening: 0.032;
+- edit without sharpening + "Aufhellung Druck" extended by "mehr schärfen": **0.057, identical
+  to today** (0.000 levels difference);
+- the owner's existing edit (already sharpened) + the extended style: **0.111 — sharpened
+  twice**, also when the style's sharpen instance carries the same name ("mehr schärfen").
+  darktable appends a second instance instead of merging.
+→ Moving the sharpening into the export only works for new edits; every older edit would be
+oversharpened on re-export.
+
+darktable-cli facts learned:
+- `--apply-custom-presets false` also skips `data.db`, so **styles are unavailable**
+  ("cannot find the style"); with `--library :memory:` styles still work once presets are on.
+- With `data.db` in use, **only one darktable-cli process per config dir** at a time (parallel
+  runs fail).
+- `--style` must come before `--core`.
