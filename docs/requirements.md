@@ -58,7 +58,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-3](#us-3--modern-base-pipeline)                 | ✅     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | ✅     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | ✅     | Print sharpening in the export      | [Foundation](#foundation)                       |
-| [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
+| [US-6](#us-6--more-analysis-on-edited-photos)       | 🚧     | More analysis on edited photos      | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)      | 📋     | Only touch what was handed over     | [Automatic editing](#automatic-editing)         |
 | [US-9](#us-9--day-auto-edit)                        | 📋     | Day auto-edit                       | [Automatic editing](#automatic-editing)         |
@@ -147,11 +147,21 @@ contain no sharpening (US-9).
 
 ### US-6 — More analysis on edited photos
 
-**Planned 📋** — As the owner, I want the rules checked against more of my edited photos before I
+**In progress 🚧** — As the owner, I want the rules checked against more of my edited photos before I
 rely on them.
 
-**Notes:** Day exposure rule (so far fitted on 37 photos), gradient filter usage (position,
-density), haze usage, aurora targets. Results go to the journal.
+**Acceptance criteria:** The rules of the day auto-edit are checked on all of the owner's edited day
+photos from 2022–2025 (706, instead of the 15–37 they were fitted on), each in the day edit of US-9
+(no haze removal, "clarity"):
+- the exposure rule of each day look — a fixed highlight target for sigmoid, a fixed midtone target
+  for AgX — fitted on some of the years and checked on the others, with the largest misses listed;
+- the look-choice rule of US-3, on 50 random photos the owner labels; more only if the rule doesn't
+  hold;
+- the gradient filter: how often and with which density, angle and position it was used, and
+  whether the sky-versus-land brightness in the new look predicts where (US-11).
+
+Haze removal is no longer used (US-4) and is not analysed further. Aurora targets belong to US-10,
+because they depend on the aurora base (US-18). Results go to the journal.
 
 ### US-18 — Aurora base pipeline
 
@@ -182,7 +192,9 @@ process and every edit I made by hand.
 
 **Acceptance criteria:** Only newly imported or selected photos are processed. Photos with a
 manual edit are skipped and reported. Running the tool again on the same photos changes nothing
-that was already right.
+that was already right. The tool recognises its own edits by a fingerprint of the history it wrote,
+kept as a tag under `photoflow|`; a photo whose history differs from its fingerprint counts as edited
+by hand. A photo whose sidecar is older than its state in darktable's library is not touched.
 
 **Decisions:** US-8 → ADR-0003
 
@@ -210,7 +222,8 @@ colourful, not neon — so I can cull after editing.
 **Acceptance criteria:** Aurora base (US-18) plus per-photo sky brightness and per-photo sky colour
 (the aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
 default and can be overridden per photo. The brightness target depends on the scene (e.g. a lit
-foreground gets a darker target). Variants for comparison are available. The self-test checks the
+foreground gets a darker target). The sky targets are derived from the owner's past aurora edits and
+checked on them. Variants for comparison are available. The self-test checks the
 tool's edits of the reference set's aurora photos like the day edits, and the upgrade block of US-9
 applies.
 
