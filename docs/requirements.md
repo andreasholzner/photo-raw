@@ -40,7 +40,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories              | Why here                                                                                                             |
 |------|----------------------|----------------------------------------------------------------------------------------------------------------------|
-| 4    | US-5, US-6, US-18    | Print sharpening moves to the export; rules validated on more edited photos; aurora base before the aurora auto-edit |
+| 4    | US-6, US-18          | Rules validated on more edited photos; aurora base before the aurora auto-edit                                       |
 | 5    | US-7 – US-10         | The tool's core: classify, safety, day and aurora edits                                                              |
 | 6    | US-14, US-17         | The to-do panel and the installation make it usable day to day                                                       |
 | 7    | US-11 – US-13, US-15 | Proposals, panoramas, collection-wide status                                                                         |
@@ -57,7 +57,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | ✅     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | ✅     | Haze and clarity                    | [Foundation](#foundation)                       |
-| [US-5](#us-5--print-sharpening-in-the-export)       | 🚧     | Print sharpening in the export      | [Foundation](#foundation)                       |
+| [US-5](#us-5--print-sharpening-in-the-export)       | ✅     | Print sharpening in the export      | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)      | 📋     | Only touch what was handed over     | [Automatic editing](#automatic-editing)         |
@@ -135,7 +135,7 @@ long-range views as a proposal the owner can switch off.
 
 ### US-5 — Print sharpening in the export
 
-**In progress 🚧** — As the owner, I want the strong print sharpening applied by the print export
+**Done ✅** — As the owner, I want the strong print sharpening applied by the print export
 instead of in every edit.
 
 **Acceptance criteria:** A print style ("photoflow Druck v1": the "Aufhellung Druck" curve plus the
