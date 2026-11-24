@@ -1,9 +1,15 @@
 mod config;
 mod darktable;
+#[allow(dead_code)] // used by the processing command (US-7)
+mod exif;
 mod image_diff;
 mod locate;
 mod reference_set;
+#[allow(dead_code)] // used by the processing command (US-7)
+mod scene;
 mod selftest;
+#[allow(dead_code)] // used by the processing command (US-8)
+mod sidecar;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
