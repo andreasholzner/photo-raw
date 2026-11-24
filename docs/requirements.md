@@ -38,12 +38,12 @@ covers and why it comes where it does. Only what is not yet done is listed: a st
 table when its stories ship. Each story's own state is recorded with the story and in the
 [story index](#story-index) below.
 
-| Step | Stories              | Why here                                                                                                             |
-|------|----------------------|----------------------------------------------------------------------------------------------------------------------|
-| 4    | US-6, US-18          | Rules validated on more edited photos; aurora base before the aurora auto-edit                                       |
-| 5    | US-7 – US-10         | The tool's core: classify, safety, day and aurora edits                                                              |
-| 6    | US-14, US-17         | The to-do panel and the installation make it usable day to day                                                       |
-| 7    | US-11 – US-13, US-15 | Proposals, panoramas, collection-wide status                                                                         |
+| Step | Stories                     | Why here                                                                       |
+|------|-----------------------------|--------------------------------------------------------------------------------|
+| 4    | US-6, US-18                 | Rules validated on more edited photos; aurora base before the aurora auto-edit |
+| 5    | US-7 – US-10                | The tool's core: classify, safety, day and aurora edits                        |
+| 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
+| 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
 
 ## Story index
 
@@ -51,26 +51,27 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 Stories are grouped by the part of the workflow they are about; a story's ID never changes.
 
-| ID                                                  | State | Story                               | Area                                            |
-|-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
-| [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
-| [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
-| [US-3](#us-3--modern-base-pipeline)                 | ✅     | Modern base pipeline                | [Foundation](#foundation)                       |
-| [US-4](#us-4--haze-and-clarity)                     | ✅     | Haze and clarity                    | [Foundation](#foundation)                       |
-| [US-5](#us-5--print-sharpening-in-the-export)       | ✅     | Print sharpening in the export      | [Foundation](#foundation)                       |
-| [US-6](#us-6--more-analysis-on-edited-photos)       | 🚧     | More analysis on edited photos      | [Foundation](#foundation)                       |
-| [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
-| [US-8](#us-8--only-touch-what-was-handed-over)      | 📋     | Only touch what was handed over     | [Automatic editing](#automatic-editing)         |
-| [US-9](#us-9--day-auto-edit)                        | 📋     | Day auto-edit                       | [Automatic editing](#automatic-editing)         |
-| [US-10](#us-10--aurora-auto-edit)                   | 📋     | Aurora auto-edit                    | [Automatic editing](#automatic-editing)         |
-| [US-11](#us-11--gradient-filter-proposal)           | 📋     | Gradient filter proposal            | [Automatic editing](#automatic-editing)         |
-| [US-12](#us-12--panorama-sets)                      | 📋     | Panorama sets                       | [Panoramas](#panoramas)                         |
-| [US-13](#us-13--stitch-panoramas)                   | 📋     | Stitch panoramas                    | [Panoramas](#panoramas)                         |
-| [US-14](#us-14--to-do-panel-in-darktable)           | 📋     | To-do panel in darktable            | [darktable integration](#darktable-integration) |
-| [US-15](#us-15--status-across-the-collection)       | 📋     | Status across the collection        | [darktable integration](#darktable-integration) |
-| [US-16](#us-16--optional-export-step)               | 📋     | Optional export step                | [darktable integration](#darktable-integration) |
-| [US-17](#us-17--installation-on-the-owners-machine) | 📋     | Installation on the owner's machine | [darktable integration](#darktable-integration) |
-| [US-18](#us-18--aurora-base-pipeline)               | 📋     | Aurora base pipeline                | [Foundation](#foundation)                       |
+| ID                                                              | State | Story                                          | Area                                            |
+|-----------------------------------------------------------------|-------|------------------------------------------------|-------------------------------------------------|
+| [US-1](#us-1--lua-spike-in-darktable)                           | ✅     | Lua spike in darktable                         | [Foundation](#foundation)                       |
+| [US-2](#us-2--reference-set-and-self-test)                      | ✅     | Reference set and self-test                    | [Foundation](#foundation)                       |
+| [US-3](#us-3--modern-base-pipeline)                             | ✅     | Modern base pipeline                           | [Foundation](#foundation)                       |
+| [US-4](#us-4--haze-and-clarity)                                 | ✅     | Haze and clarity                               | [Foundation](#foundation)                       |
+| [US-5](#us-5--print-sharpening-in-the-export)                   | ✅     | Print sharpening in the export                 | [Foundation](#foundation)                       |
+| [US-6](#us-6--more-analysis-on-edited-photos)                   | 🚧     | More analysis on edited photos                 | [Foundation](#foundation)                       |
+| [US-7](#us-7--classify-day-night-and-aurora)                    | 📋     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
+| [US-8](#us-8--only-touch-what-was-handed-over)                  | 📋     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
+| [US-9](#us-9--day-auto-edit)                                    | 📋     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
+| [US-10](#us-10--aurora-auto-edit)                               | 📋     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
+| [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
+| [US-12](#us-12--panorama-sets)                                  | 📋     | Panorama sets                                  | [Panoramas](#panoramas)                         |
+| [US-13](#us-13--stitch-panoramas)                               | 📋     | Stitch panoramas                               | [Panoramas](#panoramas)                         |
+| [US-14](#us-14--to-do-panel-in-darktable)                       | 📋     | To-do panel in darktable                       | [darktable integration](#darktable-integration) |
+| [US-15](#us-15--status-across-the-collection)                   | 📋     | Status across the collection                   | [darktable integration](#darktable-integration) |
+| [US-16](#us-16--optional-export-step)                           | 📋     | Optional export step                           | [darktable integration](#darktable-integration) |
+| [US-17](#us-17--installation-on-the-owners-machine)             | 📋     | Installation on the owner's machine            | [darktable integration](#darktable-integration) |
+| [US-18](#us-18--aurora-base-pipeline)                           | 📋     | Aurora base pipeline                           | [Foundation](#foundation)                       |
+| [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -236,6 +237,16 @@ than the land.
 
 **Notes:** Applied as a separate, easily removed step and listed for confirmation. Density and
 angle from my past usage (US-6).
+
+### US-19 — Own edits recognised after a darktable upgrade
+
+**Planned 📋** — As the owner, I want the tool to recognise its own edits also after a darktable
+upgrade, so that only photos I really edited by hand are protected.
+
+**Notes:** darktable converts modules to their current version when it loads an edit made with an
+older version, and writes the converted settings back; the edit then no longer matches the
+fingerprint the tool tagged it with (US-8, journal 2026-11-24). A photo whose state can't be told
+for sure still counts as edited by hand (ADR-0003).
 
 ## Panoramas
 
