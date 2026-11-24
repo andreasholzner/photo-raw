@@ -38,13 +38,12 @@ covers and why it comes where it does. Only what is not yet done is listed: a st
 table when its stories ship. Each story's own state is recorded with the story and in the
 [story index](#story-index) below.
 
-| Step | Stories              | Why here                                                                                   |
-|------|----------------------|--------------------------------------------------------------------------------------------|
-| 3    | US-3, US-4           | New base pipeline and haze/clarity approach; the per-photo rules are fitted on top of them |
-| 4    | US-5, US-6           | Print sharpening moves to the export; rules validated on more edited photos                |
-| 5    | US-7 – US-10         | The tool's core: classify, safety, day and aurora edits                                    |
-| 6    | US-14, US-17         | The to-do panel and the installation make it usable day to day                             |
-| 7    | US-11 – US-13, US-15 | Proposals, panoramas, collection-wide status                                               |
+| Step | Stories              | Why here                                                                                                             |
+|------|----------------------|----------------------------------------------------------------------------------------------------------------------|
+| 4    | US-5, US-6, US-18    | Print sharpening moves to the export; rules validated on more edited photos; aurora base before the aurora auto-edit |
+| 5    | US-7 – US-10         | The tool's core: classify, safety, day and aurora edits                                                              |
+| 6    | US-14, US-17         | The to-do panel and the installation make it usable day to day                                                       |
+| 7    | US-11 – US-13, US-15 | Proposals, panoramas, collection-wide status                                                                         |
 
 ## Story index
 
@@ -56,8 +55,8 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 |-----------------------------------------------------|-------|-------------------------------------|-------------------------------------------------|
 | [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
 | [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
-| [US-3](#us-3--modern-base-pipeline)                 | 🚧     | Modern base pipeline                | [Foundation](#foundation)                       |
-| [US-4](#us-4--haze-and-clarity)                     | 🚧     | Haze and clarity                    | [Foundation](#foundation)                       |
+| [US-3](#us-3--modern-base-pipeline)                 | ✅     | Modern base pipeline                | [Foundation](#foundation)                       |
+| [US-4](#us-4--haze-and-clarity)                     | ✅     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
@@ -71,6 +70,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-15](#us-15--status-across-the-collection)       | 📋     | Status across the collection        | [darktable integration](#darktable-integration) |
 | [US-16](#us-16--optional-export-step)               | ⏳     | Optional export step                | [darktable integration](#darktable-integration) |
 | [US-17](#us-17--installation-on-the-owners-machine) | 📋     | Installation on the owner's machine | [darktable integration](#darktable-integration) |
+| [US-18](#us-18--aurora-base-pipeline)               | 📋     | Aurora base pipeline                | [Foundation](#foundation)                       |
 
 ### Maintaining this file
 
@@ -111,7 +111,7 @@ Intended changes become the new reference with one command.
 
 ### US-3 — Modern base pipeline
 
-**In progress 🚧** — As the owner, I want my base edits on darktable's current scene-referred
+**Done ✅** — As the owner, I want my base edits on darktable's current scene-referred
 approach instead of the display-referred stack I kept out of habit.
 
 **Acceptance criteria:** One display transform per photo, no additional contrast curve on top.
@@ -119,18 +119,19 @@ Candidates are compared side by side on the reference set and the owner picks. F
 there are two looks, chosen per photo: sigmoid "ACES 100-nit like" with colour balance rgb
 "vibrant colors", and AgX "punchy" (exposure matched on the midtones). A rule proposes the look,
 the owner can switch it, and the owner's choices are kept as data to improve the rule. The
-aurora base is decided separately. The per-photo exposure rules (US-9, US-10) are re-fitted to
+aurora base is US-18. The per-photo exposure rules (US-9, US-10) are re-fitted to
 the new looks.
 
 ### US-4 — Haze and clarity
 
-**In progress 🚧** — As the owner, I want the haze-removal look I like on mountain photos, and the
-"punch" on other photos including aurora, without the instability haze removal showed on night
-shots.
+**Done ✅** — As the owner, I want the haze-removal look I like on mountain photos, and the
+"punch" on other photos, without the instability haze removal showed on night shots.
 
-**Acceptance criteria:** Haze removal, "diffuse or sharpen" (dehaze/clarity presets) and local
-contrast are compared on mountain, other day and aurora photos. The outcome is a choice per photo
-type, applied automatically where possible (e.g. haze removal only where there is haze).
+**Acceptance criteria:** Haze removal, "diffuse or sharpen: dehaze" and local contrast "clarity"
+are compared on day photos in the new looks (US-3), including 100 % crops of long-range mountain
+views; aurora belongs to US-18. Outcome: haze removal is no longer used on day photos (too much
+on top of the new looks); local contrast "clarity" goes on every day photo; "dehaze" is added for
+long-range views as a proposal the owner can switch off.
 
 ### US-5 — Print sharpening in the export
 
@@ -147,6 +148,17 @@ rely on them.
 
 **Notes:** Day exposure rule (so far fitted on 37 photos), gradient filter usage (position,
 density), haze usage, aurora targets. Results go to the journal.
+
+### US-18 — Aurora base pipeline
+
+**Planned 📋** — As the owner, I want my aurora photos on the new pipeline too, with less noise
+but without losing the aurora's structure and colour.
+
+**Notes:** A first research-based edit (scene-referred, profiled denoise, one local contrast, no
+haze removal) cut the noise clearly but left a coarser grain and lost much of the aurora's
+structure compared with the current recipe (journal 2026-11-23). Haze removal is unstable on
+night shots. Open: denoise settings that keep fine structure and stars, which display transform,
+how much colour, and how the foreground is handled.
 
 ## Automatic editing
 
@@ -175,8 +187,11 @@ that was already right.
 **Planned 📋** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
 I only correct outliers.
 
-**Acceptance criteria:** Base style plus exposure from the highlight rule (brightest 1 % at a
-target), validated by US-6. Photos where the rule is uncertain are flagged. The self-test (US-2)
+**Acceptance criteria:** One of the two day looks (US-3), proposed per photo, plus local contrast
+"clarity"; "dehaze" proposed for long-range views (US-4). Exposure per photo by the look's rule —
+highlights for sigmoid, midtones for AgX — validated by US-6. The owner can switch the look and
+the dehaze proposal per photo; the switches are kept as data for the rules. Photos where a rule
+is uncertain are flagged. The self-test (US-2)
 also checks the tool's edits of the reference set's day photos against the tool's previous
 output; intended changes become the new baseline. After a darktable upgrade, automatic edits
 are blocked until the self-test has run and its result was accepted.
@@ -188,12 +203,12 @@ are blocked until the self-test has run and its result was accepted.
 **Planned 📋** — As the owner, I want aurora photos edited to show how the aurora felt — bright and
 colourful, not neon — so I can cull after editing.
 
-**Acceptance criteria:** Base style plus per-photo sky brightness and per-photo sky colour (the
-aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
+**Acceptance criteria:** Aurora base (US-18) plus per-photo sky brightness and per-photo sky colour
+(the aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
 default and can be overridden per photo. The brightness target depends on the scene (e.g. a lit
-foreground gets a darker target). Variants for comparison are available. The self-test checks
-the tool's edits of the reference set's aurora photos like the day edits, and the upgrade block
-of US-9 applies.
+foreground gets a darker target). Variants for comparison are available. The self-test checks the
+tool's edits of the reference set's aurora photos like the day edits, and the upgrade block of US-9
+applies.
 
 **Decisions:** US-10 → ADR-0004
 
