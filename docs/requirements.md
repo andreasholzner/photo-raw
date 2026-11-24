@@ -57,7 +57,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-1](#us-1--lua-spike-in-darktable)               | ✅     | Lua spike in darktable              | [Foundation](#foundation)                       |
 | [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | 🚧     | Modern base pipeline                | [Foundation](#foundation)                       |
-| [US-4](#us-4--haze-and-clarity)                     | 📋     | Haze and clarity                    | [Foundation](#foundation)                       |
+| [US-4](#us-4--haze-and-clarity)                     | 🚧     | Haze and clarity                    | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
@@ -124,7 +124,7 @@ the new looks.
 
 ### US-4 — Haze and clarity
 
-**Planned 📋** — As the owner, I want the haze-removal look I like on mountain photos, and the
+**In progress 🚧** — As the owner, I want the haze-removal look I like on mountain photos, and the
 "punch" on other photos including aurora, without the instability haze removal showed on night
 shots.
 

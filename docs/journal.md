@@ -705,3 +705,26 @@ quartiles of the owner's edit; share of strongly coloured pixels in the sigmoid 
   12 of 15 right (misses: _DSC5677, _DSC5719 picked S; _DSC4805, bright rock, picked A).
   Reading: blue-sky and snow scenes → sigmoid; scenes dominated by foliage, rock or shade →
   AgX. Thresholds fitted on the same 15 photos → not validated; needs more labelled photos.
+
+### 2026-11-24 — US-4: haze removal vs. alternatives on the new looks
+
+Same 16 photos, each in the look the owner picked in US-3 round 2 (tulips: sigmoid). Exposure
+solved once per photo without any haze step and used for all variants, so each column shows
+only the module's own effect. Sheets `photo-edits/_us4/haze_sheet_1..4.png`; columns: owner's
+edit, owner's haze removal kept (0.2/0.2 or 0.4/0.25), none, "diffuse or sharpen: dehaze |
+default", local contrast "clarity".
+
+| | midtones vs. owner | colour vs. owner |
+|---|---|---|
+| owner's haze removal kept | ×1.03 | ×1.42 |
+| none | ×1.12 | ×1.28 |
+| diffuse "dehaze" | ×1.13 | ×1.33 |
+| local contrast "clarity" | ×1.13 | ×1.27 |
+
+- Haze removal has by far the strongest effect: darker midtones, more saturation, deep blue
+  distant ranges — the look the owner is used to. Diffuse "dehaze" and "clarity" are subtle
+  at sheet size; their difference is in fine detail and needs 100 % crops.
+- Experiment notes: a second module instance needs an explicit `iop_order_list` (see US-3);
+  local contrast placed after the display transform shifts the brightest pixels, so solving
+  exposure on highlights per variant is misleading — one exposure per photo is the fair way;
+  a shared sqlite connection across threads lost a query (round 2's sidecars checked: unaffected).
