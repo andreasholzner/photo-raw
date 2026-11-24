@@ -728,3 +728,10 @@ default", local contrast "clarity".
   local contrast placed after the display transform shifts the brightest pixels, so solving
   exposure on highlights per variant is misleading — one exposure per photo is the fair way;
   a shared sqlite connection across threads lost a query (round 2's sidecars checked: unaffected).
+- **Owner's verdict:** the original haze removal is now too much on top of the new looks.
+  "dehaze" and "clarity" both look good, "clarity" preferred in general; undecided for
+  long-range mountain views → 100 % crops of distant ranges (_DSC8328, _DSC8333, _DSC4805,
+  `photo-edits/_us4/crops4_*.png`; columns none / dehaze / clarity / clarity + dehaze):
+  dehaze separates distant layers from each other and the sky and thins the blue veil;
+  clarity crisps texture (rock, foliage) but leaves the distant haze; combined, the effects
+  add up without halos or visible noise at 100 %.
