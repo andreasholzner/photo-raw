@@ -10,3 +10,4 @@ principle, not implementation details.
 | [ADR-0003](0003-never-destructive.md) | The tool is never destructive | accepted |
 | [ADR-0004](0004-rendering-is-darktables.md) | Per-photo values come from darktable's own rendering | accepted |
 | [ADR-0005](0005-rust.md) | The tool is written in Rust | accepted |
+| [ADR-0006](0006-executable-scenarios.md) | Acceptance criteria are executable scenarios | accepted |
