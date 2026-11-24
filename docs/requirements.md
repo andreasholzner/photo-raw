@@ -57,7 +57,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-2](#us-2--reference-set-and-self-test)          | ✅     | Reference set and self-test         | [Foundation](#foundation)                       |
 | [US-3](#us-3--modern-base-pipeline)                 | ✅     | Modern base pipeline                | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                     | ✅     | Haze and clarity                    | [Foundation](#foundation)                       |
-| [US-5](#us-5--print-sharpening-in-the-export)       | 📋     | Print sharpening in the export      | [Foundation](#foundation)                       |
+| [US-5](#us-5--print-sharpening-in-the-export)       | 🚧     | Print sharpening in the export      | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)       | 📋     | More analysis on edited photos      | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)        | 📋     | Classify day, night and aurora      | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)      | 📋     | Only touch what was handed over     | [Automatic editing](#automatic-editing)         |
@@ -68,7 +68,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-13](#us-13--stitch-panoramas)                   | 📋     | Stitch panoramas                    | [Panoramas](#panoramas)                         |
 | [US-14](#us-14--to-do-panel-in-darktable)           | 📋     | To-do panel in darktable            | [darktable integration](#darktable-integration) |
 | [US-15](#us-15--status-across-the-collection)       | 📋     | Status across the collection        | [darktable integration](#darktable-integration) |
-| [US-16](#us-16--optional-export-step)               | ⏳     | Optional export step                | [darktable integration](#darktable-integration) |
+| [US-16](#us-16--optional-export-step)               | 📋     | Optional export step                | [darktable integration](#darktable-integration) |
 | [US-17](#us-17--installation-on-the-owners-machine) | 📋     | Installation on the owner's machine | [darktable integration](#darktable-integration) |
 | [US-18](#us-18--aurora-base-pipeline)               | 📋     | Aurora base pipeline                | [Foundation](#foundation)                       |
 
@@ -135,11 +135,15 @@ long-range views as a proposal the owner can switch off.
 
 ### US-5 — Print sharpening in the export
 
-**Planned 📋** — As the owner, I want the strong print sharpening applied by the print export
+**In progress 🚧** — As the owner, I want the strong print sharpening applied by the print export
 instead of in every edit.
 
-**Acceptance criteria:** The print export applies the print sharpening; edits keep only moderate
-sharpening.
+**Acceptance criteria:** A print style ("photoflow Druck v1": the "Aufhellung Druck" curve plus the
+"mehr schärfen" sharpening) is kept in the repository; for an edit without sharpening it reproduces
+today's print export exactly. A new export preset "Fotobuch (neu)" applies it; the existing
+"Fotobuch" stays for older edits, which already contain sharpening and would otherwise be sharpened
+twice. A short setup description explains the one-time steps in darktable. New edits by the tool
+contain no sharpening (US-9).
 
 ### US-6 — More analysis on edited photos
 
@@ -188,13 +192,13 @@ that was already right.
 I only correct outliers.
 
 **Acceptance criteria:** One of the two day looks (US-3), proposed per photo, plus local contrast
-"clarity"; "dehaze" proposed for long-range views (US-4). Exposure per photo by the look's rule —
-highlights for sigmoid, midtones for AgX — validated by US-6. The owner can switch the look and
-the dehaze proposal per photo; the switches are kept as data for the rules. Photos where a rule
-is uncertain are flagged. The self-test (US-2)
-also checks the tool's edits of the reference set's day photos against the tool's previous
-output; intended changes become the new baseline. After a darktable upgrade, automatic edits
-are blocked until the self-test has run and its result was accepted.
+"clarity"; "dehaze" proposed for long-range views (US-4). No sharpening in the edit (print
+sharpening comes with the export, US-5). Exposure per photo by the look's rule — highlights for
+sigmoid, midtones for AgX — validated by US-6. The owner can switch the look and the dehaze proposal
+per photo; the switches are kept as data for the rules. Photos where a rule is uncertain are
+flagged. The self-test (US-2) also checks the tool's edits of the reference set's day photos against
+the tool's previous output; intended changes become the new baseline. After a darktable upgrade,
+automatic edits are blocked until the self-test has run and its result was accepted.
 
 **Decisions:** US-9 → ADR-0004
 
@@ -268,17 +272,27 @@ forgotten between editing sessions.
 
 ### US-16 — Optional export step
 
-**Backlog ⏳** — As the owner, I export a finished folder with my existing presets ("Fotobuch", …)
-as an optional open step.
+**Planned 📋** — As the owner, I export a finished folder with the right print preset without
+having to know which edits already contain sharpening.
 
-**Notes:** Low priority: exporting is already a single action with the existing preset.
+**Acceptance criteria:** Exporting is an open step in the panel (optional, like the rest of the
+folder's steps). Its export action picks the preset per photo: "Fotobuch (neu)" for edits without
+sharpening, the old "Fotobuch" for edits that contain sharpening. A manual export with the new print
+style of a photo that already contains sharpening triggers a warning in darktable.
+
+**Notes:** Whether the Lua layer can see the selected export style during a manual export is
+still to be checked.
 
 ### US-17 — Installation on the owner's machine
 
-**Planned 📋** — As the owner, I install and update the tool and its darktable script simply on
-Manjaro.
+**Planned 📋** — As the owner, I install and update the tool, its darktable script and its
+darktable styles simply on Manjaro.
 
-**Acceptance criteria:** One documented way to install and update the binary and the Lua script.
-The tool runs next to an open darktable without touching its library or configuration.
+**Acceptance criteria:** One documented way to install and update the binary (e.g. a PKGBUILD) and
+the Lua script (e.g. through darktable's script manager from the repository). The styles kept in the
+repository are imported by the Lua script at darktable start when missing or outdated, under
+versioned names; the owner's own styles stay untouched. Export presets, which the Lua API cannot
+create, are a documented one-time manual step. The tool runs next to an open darktable and never
+writes darktable's databases from outside.
 
 **Decisions:** US-17 → ADR-0005

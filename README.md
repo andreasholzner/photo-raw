@@ -41,3 +41,7 @@ Renders are stored in `~/.local/share/photoflow/selftest/` (`reference/`, `curre
 you can open side by side. darktable-cli runs with a private copy of your darktable
 configuration and an in-memory library; your library, configuration and photos are not
 touched.
+
+## darktable setup
+
+One-time steps in darktable (styles, export presets): [docs/darktable-setup.md](docs/darktable-setup.md).
