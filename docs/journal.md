@@ -951,3 +951,43 @@ Luma noise in a sky patch (std. of pixel minus 3×3 mean, ×1000; lower is clean
   sky noise matches what the owner sees as noisy. Too noisy in D: _DSC8300, _DSC7371, _DSC7305,
   _DSC8305 (D noise 11–15); fine: the four at ≤ 5.4; _DSC3492 (10.9) D ≈ E. → Switch to E when D's
   noise is above about 8–10.
+
+### 2026-11-25 — US-18, round 3: foreground colour
+
+8 aurora photos with a land/snow foreground (round 2's set without _DSC6085 and _DSC3492 — on their
+dark foregrounds a masked correction made no measurable difference, so the solver failed — plus
+_DSC7579). Base: S+ with D, or E where D's sky noise is above 9 (×1000) — E for _DSC8300, 8305,
+7305, 7579, 7371. Sky exposure and WB as in round 2. Tools were chosen from current darktable
+practice, not from the owner's old edits (owner, 2026-11-25); only the foreground colour target —
+slightly blue snow, R/G 0.95, B/G 1.25 — is taken from the owner's edits without a cast.
+Horizon positions read off the sheets by hand.
+
+- **F0** no foreground step.
+- **F1** channel mixer rgb as plain R/B gains (no chromatic adaptation) under a drawn gradient
+  mask starting at the horizon, gains solved to the target.
+- **F2** no mask: one global WB half-way between the sky-background and the foreground targets.
+- **F3** color calibration (CAT16, custom illuminant) under the same mask — the darktable manual's
+  way for mixed lighting; illuminant solved to the target.
+
+Sheets `photo-edits/_us18/round3/sheet_<photo>.png` (columns A, F0, F1, F2, F3; rows full frame,
+aurora crop, foreground crop); full-size JPGs and sidecars in `photo-edits/_us18/round3/<folder>/`.
+
+Foreground colour (R/G / B/G of the middle luminance band; target 0.95 / 1.25):
+
+| photo | A | F0 | F1 | F2 | F3 |
+|---|---|---|---|---|---|
+| _DSC8300 | 0.57 / 0.83 | 0.69 / 1.02 | 0.91 / 1.18 | 0.76 / 1.00 | 0.92 / 1.21 |
+| _DSC8305 | 0.55 / 1.26 | 0.79 / 1.70 | 0.96 / 1.29 | 0.92 / 1.50 | 0.94 / 1.26 |
+| _DSC7305 | 0.99 / 1.09 | 1.05 / 1.07 | 1.00 / 1.28 | 1.00 / 1.11 | 1.01 / 1.32 |
+| _DSC7579 | 0.75 / 1.59 | 0.45 / 2.04 | 1.05 / 1.49 | 0.48 / 1.75 | 0.89 / 1.44 |
+| _DSC7371 | 0.73 / 0.32 | 0.92 / 0.41 | 0.81 / 0.92 | 0.84 / 0.60 | 0.81 / 0.92 |
+| _DSC8287 | 1.04 / 1.48 | 1.09 / 1.63 | 0.97 / 1.30 | 1.14 / 1.59 | 0.96 / 1.28 |
+| _DSC8257 | 0.85 / 1.18 | 0.91 / 1.30 | 0.94 / 1.26 | 0.95 / 1.27 | 0.94 / 1.23 |
+| _DSC8296 | 1.04 / 1.40 | 1.17 / 1.39 | 1.00 / 1.31 | 1.10 / 1.45 | 0.98 / 1.30 |
+
+- With the sky-based WB alone (F0) the foreground is off in both directions: green on _DSC8300,
+  cyan-blue on _DSC8305 and _DSC7579, orange from light pollution on _DSC7371; the rest are close.
+- F1 and F3 reach the target on all but _DSC7371 (orange too strong; capped). At sheet size F3
+  looks more neutral, F1 can tip into brown (_DSC7579). F2 only goes half-way and also shifts the
+  sky — a single WB can't serve both.
+- Needed for automation: a horizon line per photo (also for US-11).
