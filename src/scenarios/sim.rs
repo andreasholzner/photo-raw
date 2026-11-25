@@ -3,9 +3,11 @@
 //! US-20 spike (journal 2026-11-24): darkroom changes are written only when the darkroom is left,
 //! lighttable changes at once. Sidecars are real XMP text, read back with the tool's own reader.
 
+use super::{Change, Driver};
+use crate::edit_state::{EditState, LibraryState, edit_state, edit_tag};
+use crate::sidecar::{self, History};
+use anyhow::{Context, Result};
 use base64::Engine;
-use photoflow::edit_state::{LibraryState, edit_tag};
-use photoflow::sidecar::{self, History};
 use std::io::Write;
 
 #[derive(Debug, Clone)]
@@ -190,5 +192,85 @@ impl Photo {
             hist: self.hist.clone(),
             compressed,
         });
+    }
+}
+
+/// The simulated darktable as a scenario driver: one photo per scenario.
+#[derive(Debug, Default)]
+pub struct Sim {
+    photo: Photo,
+}
+
+fn change(h: &mut Hist, change: Change) {
+    match change {
+        Change::Exposure => h.push(Entry::new("exposure", &[0, 0, 0xe0, 0x3f])),
+        Change::ModuleOn => h.push(Entry::new("vignette", &[0, 0, 0x80, 0x3f])),
+        Change::ModuleOff => {
+            let mut e = Entry::new("bilat", &[9, 10, 11, 12]);
+            e.enabled = false;
+            h.push(e);
+        }
+        Change::Mask => {
+            let mut e = Entry::new("bilat", &[9, 10, 11, 12]);
+            e.blend = vec![1; 8];
+            h.push(e);
+            let n = h.entries.len() - 1;
+            h.masks.push((n, vec![0x3f, 0x00, 0x10, 0x3e]));
+        }
+    }
+}
+
+impl Driver for Sim {
+    fn unedited(&mut self) -> Result<()> {
+        self.photo = Photo::unedited();
+        Ok(())
+    }
+
+    fn tool_edit(&mut self) -> Result<()> {
+        self.photo = Photo::edited_by_tool();
+        Ok(())
+    }
+
+    fn change_in_darkroom(&mut self, c: Change) -> Result<()> {
+        self.photo.in_darkroom(|h| change(h, c));
+        Ok(())
+    }
+
+    fn undo(&mut self) -> Result<()> {
+        self.photo.in_darkroom(|h| h.end -= 1);
+        Ok(())
+    }
+
+    fn leave_darkroom(&mut self) -> Result<()> {
+        self.photo.leave_darkroom();
+        Ok(())
+    }
+
+    fn apply_style_in_lighttable(&mut self) -> Result<()> {
+        self.photo.in_lighttable(|h| {
+            h.push(Entry::new("lens", &[1, 2]));
+            h.push(Entry::new("denoiseprofile", &[3, 4]));
+        });
+        Ok(())
+    }
+
+    fn compress_history(&mut self) -> Result<()> {
+        self.photo.compress();
+        Ok(())
+    }
+
+    fn open_other_photo_in_darkroom(&mut self) -> Result<()> {
+        self.photo.library.darkroom_open = true;
+        Ok(())
+    }
+
+    fn edit_state(&mut self) -> Result<EditState> {
+        let sidecar = self
+            .photo
+            .sidecar
+            .as_ref()
+            .context("darktable wrote no sidecar")?
+            .read();
+        Ok(edit_state(&self.photo.library, &sidecar))
     }
 }

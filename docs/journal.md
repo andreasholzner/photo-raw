@@ -855,3 +855,27 @@ measures from is unverified).
 Look-choice check: 50 random photos on `photo-edits/_us6/looks_01..10.png` (columns: owner's
 edit, sigmoid ACES + vibrant, AgX punchy; both matched to the owner's edit), `index.tsv` maps
 sheet/row to the file; the US-3 rule's predictions are kept back until the owner has picked.
+
+### 2026-11-25 — US-20: the US-8 scenarios against the real darktable
+
+`photoflow selftest scenarios` runs the 11 unattended `@darktable` scenarios of US-8 against
+darktable 5.6.1 (private configuration and library, copies of one reference raw, virtual display
+in the container): all pass, about 3 minutes plus ~20 s start. Every action was checked to have a
+visible effect (otherwise a scenario that expects "edited by hand" fails; compress was checked
+in the library: 12 → 11 entries). Learned on the way:
+- Import and view switches run in the background: the driver waits for the image to be in the
+  library and for the view to have changed; without that the photo was "not in the library"
+  and darktable still showed the darkroom after "leaving" it.
+- Applying the same style a second time through Lua changed nothing (no second instance, unlike
+  darktable-cli's `--style` in US-5), so the stand-in for the tool's edit is an exposure change
+  made in the darkroom, and the print style is the "style applied by hand".
+- A sidecar darktable wrote while it was being ended in the darkroom didn't match its library
+  (it had a style the library didn't have) → the driver returns to the lighttable before
+  ending darktable. One more reason for the rule that the tool works only outside the darkroom.
+- **A running darktable of the owner doesn't interfere:** with a second darktable running on the
+  configuration folder the self-test copies from, in the same D-Bus session (as on a desktop),
+  all scenarios passed and both instances kept running; darktable's locks are per library and
+  configuration folder, and the self-test has its own.
+- The test darktable runs in its own process group (so it can be ended completely); Ctrl+C
+  therefore reached only photoflow and left darktable running → photoflow now ends it on
+  Ctrl+C, and a leftover from a run that ended abruptly is ended at the next start.

@@ -1,0 +1,417 @@
+//! The real darktable application as scenario driver (US-20).
+//!
+//! darktable runs with a private copy of the owner's configuration (settings, presets, styles)
+//! and its own throwaway library; the photos are copies of one raw of the reference set. The
+//! owner's library, configuration and photos are never touched. A Lua driver inside darktable
+//! executes the commands photoflow writes to a folder. Without a display (in the development
+//! container) darktable runs under a virtual one (`xvfb-run`).
+
+use super::{Change, Driver};
+use crate::config::Config;
+use crate::edit_state::{EditState, LibraryState, edit_state, edit_tag};
+use crate::locate::locate;
+use crate::{reference_set, sidecar};
+use anyhow::{Context, Result, bail};
+use std::os::unix::process::CommandExt;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::time::{Duration, Instant};
+
+/// Process group of the running test darktable, for Ctrl+C (0 = none).
+static GROUP: AtomicU32 = AtomicU32::new(0);
+/// Records the process group of the test darktable, so a later run can end a leftover one.
+const PID_FILE: &str = "darktable.pid";
+
+fn kill_group(pgid: u32, signal: &str) {
+    let _ = Command::new("kill")
+        .args([signal, "--", &format!("-{pgid}")])
+        .stderr(Stdio::null())
+        .status();
+}
+
+/// Ends a test darktable left over from a run that ended abruptly, recognised by its private
+/// configuration in `work` (never the owner's darktable).
+fn end_leftover(work: &Path) {
+    let Ok(text) = std::fs::read_to_string(work.join(PID_FILE)) else {
+        return;
+    };
+    let Ok(pgid) = text.trim().parse::<u32>() else {
+        return;
+    };
+    let ours = std::fs::read(format!("/proc/{pgid}/cmdline"))
+        .map(|c| String::from_utf8_lossy(&c).contains(&*work.to_string_lossy()))
+        .unwrap_or(false);
+    if ours {
+        kill_group(pgid, "-KILL");
+        std::thread::sleep(Duration::from_secs(1));
+    }
+}
+
+const DRIVER_LUA: &str = include_str!("driver.lua");
+/// The style applied "by hand" in the lighttable.
+const STYLE_NAME: &str = "photoflow Druck v1";
+const STYLE_FILE: &str = include_str!("../../darktable/styles/photoflow Druck v1.dtstyle");
+
+pub struct App {
+    child: Child,
+    work: PathBuf,
+    ipc: PathBuf,
+    next: u64,
+    raw: PathBuf,
+    /// The sidecar that stands for the tool's edit.
+    edit: String,
+    /// A photo used as "another photo" (the one the stand-in edit was made on).
+    other: PathBuf,
+    photos: u32,
+    current: Option<PathBuf>,
+    in_darkroom: Option<PathBuf>,
+}
+
+fn sidecar_of(raw: &Path) -> PathBuf {
+    PathBuf::from(format!("{}.xmp", raw.display()))
+}
+
+impl App {
+    /// Starts darktable in `work` (emptied first) and prepares the tool's stand-in edit.
+    pub fn start(cfg: &Config, work: &Path) -> Result<Self> {
+        end_leftover(work);
+        if work.exists() {
+            std::fs::remove_dir_all(work)?;
+        }
+        let config = work.join("darktable-config");
+        let ipc = work.join("ipc");
+        for d in [
+            &config.join("lua"),
+            &ipc,
+            &work.join("photos"),
+            &work.join("edits"),
+        ] {
+            std::fs::create_dir_all(d)?;
+        }
+
+        // private configuration: the owner's settings, presets and styles, plus the Lua driver
+        let owner = cfg.darktable_config_dir()?;
+        let rc = std::fs::read_to_string(owner.join("darktablerc"))
+            .with_context(|| format!("cannot read {}", owner.join("darktablerc").display()))?;
+        if rc.lines().any(|l| l.trim() == "write_sidecar_files=never") {
+            bail!(
+                "darktable is set to never write sidecar files, which photoflow relies on (preferences → storage → write sidecar file for each image)"
+            );
+        }
+        std::fs::write(config.join("darktablerc"), rc)?;
+        if owner.join("data.db").is_file() {
+            std::fs::copy(owner.join("data.db"), config.join("data.db"))?;
+        }
+        if owner.join("color").is_dir() {
+            copy_dir(&owner.join("color"), &config.join("color"))?;
+        }
+        std::fs::write(config.join("lua/photoflow_selftest.lua"), DRIVER_LUA)?;
+        std::fs::write(config.join("luarc"), "require \"photoflow_selftest\"\n")?;
+        let style = work.join(format!("{STYLE_NAME}.dtstyle"));
+        std::fs::write(&style, STYLE_FILE)?;
+
+        let p = reference_set::load()?
+            .into_iter()
+            .find(|p| p.file.to_ascii_uppercase().ends_with(".ARW"))
+            .context("the reference set has no raw photo")?;
+        let raw = locate(&cfg.photo_root, p.year, &p.file)?;
+
+        let headless =
+            std::env::var_os("DISPLAY").is_none() && std::env::var_os("WAYLAND_DISPLAY").is_none();
+        let mut cmd = if headless {
+            let mut c = Command::new("xvfb-run");
+            c.args(["-a", "-s", "-screen 0 1600x1000x24", &cfg.darktable.app]);
+            c
+        } else {
+            Command::new(&cfg.darktable.app)
+        };
+        let log = std::fs::File::create(work.join("darktable.log"))?;
+        cmd.arg("--configdir")
+            .arg(&config)
+            .arg("--library")
+            .arg(config.join("library.db"))
+            .env("PHOTOFLOW_SELFTEST_IPC", &ipc)
+            .stdin(Stdio::null())
+            .stdout(log.try_clone()?)
+            .stderr(log)
+            .process_group(0);
+        let child = cmd.spawn().with_context(|| {
+            format!(
+                "cannot start {}{}",
+                if headless { "xvfb-run " } else { "" },
+                cfg.darktable.app
+            )
+        })?;
+
+        let pgid = child.id();
+        std::fs::write(work.join(PID_FILE), pgid.to_string())?;
+        GROUP.store(pgid, Ordering::SeqCst);
+        // Ctrl+C reaches only photoflow (darktable runs in its own process group): end it too
+        let _ = ctrlc::set_handler(|| {
+            let pgid = GROUP.load(Ordering::SeqCst);
+            if pgid != 0 {
+                kill_group(pgid, "-KILL");
+            }
+            std::process::exit(130);
+        });
+        let mut app = App {
+            child,
+            work: work.to_path_buf(),
+            ipc,
+            next: 1,
+            raw,
+            edit: String::new(),
+            other: PathBuf::new(),
+            photos: 0,
+            current: None,
+            in_darkroom: None,
+        };
+        app.wait_ready()?;
+        app.call(&["import_style", &style.to_string_lossy()])?;
+
+        // the tool's stand-in edit (until the tool writes its own, US-9): an exposure change made
+        // in the darkroom, as darktable writes it
+        let other = app.new_photo()?;
+        app.darkroom(&other)?;
+        app.action("iop/exposure/exposure", "value", "set", 1.3)?;
+        let before = std::fs::read_to_string(sidecar_of(&other)).ok();
+        app.lighttable()?;
+        app.wait_for_sidecar(&other, &before, 60);
+        app.call(&["touch", &other.to_string_lossy()])?;
+        app.edit = std::fs::read_to_string(sidecar_of(&other))?;
+        app.other = other;
+        Ok(app)
+    }
+
+    fn wait_ready(&mut self) -> Result<()> {
+        let ready = self.ipc.join("ready");
+        let start = Instant::now();
+        while !ready.exists() {
+            if let Some(status) = self.child.try_wait()? {
+                bail!(
+                    "darktable ended ({status}); see {}",
+                    self.work.join("darktable.log").display()
+                );
+            }
+            if start.elapsed() > Duration::from_secs(180) {
+                bail!(
+                    "darktable didn't start within 3 minutes; see {}",
+                    self.work.join("darktable.log").display()
+                );
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
+        Ok(())
+    }
+
+    /// Sends a command to the Lua driver and waits for its reply.
+    fn call(&mut self, args: &[&str]) -> Result<String> {
+        let n = self.next;
+        self.next += 1;
+        let cmd = self.ipc.join(format!("cmd-{n}"));
+        let tmp = self.ipc.join(format!("cmd-{n}.tmp"));
+        std::fs::write(&tmp, args.join("\t"))?;
+        std::fs::rename(&tmp, &cmd)?;
+        let reply = self.ipc.join(format!("reply-{n}"));
+        let start = Instant::now();
+        loop {
+            if let Ok(text) = std::fs::read_to_string(&reply) {
+                return match text.split_once('\t') {
+                    Some(("ok", r)) => Ok(r.to_string()),
+                    Some((_, msg)) => bail!("darktable: {} failed: {msg}", args[0]),
+                    None => bail!("darktable: bad reply {text:?}"),
+                };
+            }
+            if let Some(status) = self.child.try_wait()? {
+                bail!(
+                    "darktable ended ({status}) during {}; see {}",
+                    args[0],
+                    self.work.join("darktable.log").display()
+                );
+            }
+            if start.elapsed() > Duration::from_secs(300) {
+                bail!("darktable didn't answer {} within 5 minutes", args[0]);
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    /// Imports a fresh copy of the test raw, in its own folder.
+    fn new_photo(&mut self) -> Result<PathBuf> {
+        self.lighttable()?;
+        self.photos += 1;
+        let dir = self.work.join("photos").join(self.photos.to_string());
+        std::fs::create_dir_all(&dir)?;
+        let photo = dir.join(self.raw.file_name().context("raw without name")?);
+        std::fs::copy(&self.raw, &photo)?;
+        self.call(&["import", &dir.to_string_lossy()])?;
+        Ok(photo)
+    }
+
+    fn lighttable(&mut self) -> Result<()> {
+        self.call(&["lighttable"])?;
+        self.in_darkroom = None;
+        Ok(())
+    }
+
+    fn darkroom(&mut self, photo: &Path) -> Result<()> {
+        if self.in_darkroom.as_deref() != Some(photo) {
+            self.call(&["darkroom", &photo.to_string_lossy()])?;
+            self.in_darkroom = Some(photo.to_path_buf());
+        }
+        Ok(())
+    }
+
+    fn current(&self) -> Result<PathBuf> {
+        self.current.clone().context("no photo under test")
+    }
+
+    fn action(&mut self, path: &str, element: &str, effect: &str, size: f64) -> Result<()> {
+        self.call(&["action", path, element, effect, &size.to_string()])?;
+        std::thread::sleep(Duration::from_secs(1));
+        Ok(())
+    }
+
+    /// Waits until darktable has rewritten the sidecar (it may not, if nothing changed).
+    fn wait_for_sidecar(&self, photo: &Path, before: &Option<String>, secs: u64) {
+        let start = Instant::now();
+        while start.elapsed() < Duration::from_secs(secs) {
+            if std::fs::read_to_string(sidecar_of(photo)).ok() != *before {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(300));
+        }
+    }
+
+    pub fn stop(&mut self) {
+        // leave the darkroom first: a sidecar darktable wrote while being ended in the darkroom
+        // didn't match its library (journal 2026-11-25)
+        if self.child.try_wait().ok().flatten().is_none() && self.lighttable().is_ok() {
+            std::thread::sleep(Duration::from_secs(5));
+        }
+        // darktable has no reliable "quit" for scripts: end the whole process group
+        let pgid = self.child.id();
+        kill_group(pgid, "-TERM");
+        std::thread::sleep(Duration::from_secs(2));
+        kill_group(pgid, "-KILL");
+        let _ = self.child.wait();
+        GROUP.store(0, Ordering::SeqCst);
+        let _ = std::fs::remove_file(self.work.join(PID_FILE));
+    }
+}
+
+impl Drop for App {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+impl Driver for App {
+    fn unedited(&mut self) -> Result<()> {
+        self.current = Some(self.new_photo()?);
+        Ok(())
+    }
+
+    fn tool_edit(&mut self) -> Result<()> {
+        let photo = self.current()?;
+        let dir = self.work.join("edits").join(self.photos.to_string());
+        std::fs::create_dir_all(&dir)?;
+        let xmp = dir.join(format!(
+            "{}.xmp",
+            photo.file_name().unwrap().to_string_lossy()
+        ));
+        std::fs::write(&xmp, &self.edit)?;
+        let p = photo.to_string_lossy().to_string();
+        self.call(&["apply_sidecar", &p, &xmp.to_string_lossy()])?;
+        self.call(&["touch", &p])?;
+        let history = sidecar::read(&sidecar_of(&photo))?;
+        self.call(&["tag", &p, &edit_tag(&history)])?;
+        Ok(())
+    }
+
+    fn change_in_darkroom(&mut self, change: Change) -> Result<()> {
+        let photo = self.current()?;
+        self.darkroom(&photo)?;
+        match change {
+            Change::Exposure => self.action("iop/exposure/exposure", "value", "set", 2.0),
+            Change::ModuleOn => self.action("iop/vignette", "enable", "on", 1.0),
+            Change::ModuleOff => self.action("iop/exposure", "enable", "off", 1.0),
+            Change::Mask => bail!("drawing a mask can't be scripted (a @manual check)"),
+        }
+    }
+
+    fn undo(&mut self) -> Result<()> {
+        self.action("views/darkroom/undo", "", "", 1.0)
+    }
+
+    fn leave_darkroom(&mut self) -> Result<()> {
+        let photo = self.current()?;
+        let before = std::fs::read_to_string(sidecar_of(&photo)).ok();
+        self.lighttable()?;
+        self.wait_for_sidecar(&photo, &before, 60);
+        Ok(())
+    }
+
+    fn apply_style_in_lighttable(&mut self) -> Result<()> {
+        let photo = self.current()?;
+        let before = std::fs::read_to_string(sidecar_of(&photo)).ok();
+        self.lighttable()?;
+        self.call(&["apply_style", STYLE_NAME, &photo.to_string_lossy()])?;
+        self.wait_for_sidecar(&photo, &before, 10);
+        Ok(())
+    }
+
+    fn compress_history(&mut self) -> Result<()> {
+        let photo = self.current()?;
+        self.darkroom(&photo)?;
+        self.action("lib/history/compress history stack", "", "", 1.0)?;
+        self.leave_darkroom()
+    }
+
+    fn open_other_photo_in_darkroom(&mut self) -> Result<()> {
+        let other = self.other.clone();
+        self.darkroom(&other)
+    }
+
+    fn edit_state(&mut self) -> Result<EditState> {
+        let photo = self.current()?;
+        let p = photo.to_string_lossy().to_string();
+        let state = self.call(&["state", &p])?;
+        let mut f = state.splitn(3, '\t');
+        let altered = f.next() == Some("1");
+        let view = f.next().unwrap_or("").to_string();
+        let tags = f
+            .next()
+            .unwrap_or("")
+            .split('\u{1f}')
+            .filter(|t| !t.is_empty())
+            .map(String::from)
+            .collect();
+        let library = LibraryState {
+            is_altered: altered,
+            tags,
+            darkroom_open: view == "darkroom",
+        };
+        if !library.darkroom_open {
+            // before the tool reads an edit, darktable is made to write the sidecar
+            self.call(&["touch", &p])?;
+        }
+        let history = sidecar::read(&sidecar_of(&photo))?;
+        Ok(edit_state(&library, &history))
+    }
+}
+
+fn copy_dir(from: &Path, to: &Path) -> Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let target = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&entry.path(), &target)?;
+        } else {
+            std::fs::copy(entry.path(), &target)?;
+        }
+    }
+    Ok(())
+}

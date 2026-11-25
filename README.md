@@ -23,24 +23,34 @@ photo_root = "~/Pictures/raw"   # folder that contains the trip folders
 ```
 
 Optional settings and their defaults: run any command without a configuration to see a
-commented example.
+commented example (e.g. the paths of `darktable-cli` and `darktable`).
 
 ## Self-test
 
-Checks that darktable still renders a fixed set of your edited photos
-([data/reference-set.toml](data/reference-set.toml)) as before — run it after every darktable
-upgrade, and after changes to presets or styles.
+Run it after every darktable upgrade, and after changes to presets or styles. It checks two
+things:
+
+- **Rendering:** darktable still renders a fixed set of your edited photos
+  ([data/reference-set.toml](data/reference-set.toml)) as before.
+- **darktable's behaviour:** the scenarios tagged `@darktable` in [features/](features/) — the
+  things photoflow relies on, such as recognising its own edits and leaving yours alone.
 
 ```sh
-photoflow selftest init     # once: render the set and store it as the reference
-photoflow selftest run      # render again and compare with the reference
-photoflow selftest accept   # make the last run the new reference (intended changes)
+photoflow selftest init       # once: render the set and store it as the reference
+photoflow selftest run        # render and compare, then run the darktable scenarios
+photoflow selftest scenarios  # only the darktable scenarios (about 3–4 minutes)
+photoflow selftest accept     # make the last renders the new reference (intended changes)
 ```
 
 Renders are stored in `~/.local/share/photoflow/selftest/` (`reference/`, `current/`), as PNGs
 you can open side by side. darktable-cli runs with a private copy of your darktable
-configuration and an in-memory library; your library, configuration and photos are not
-touched.
+configuration and an in-memory library.
+
+For the scenarios, **a darktable window opens and works by itself for a few minutes — don't
+touch it**; it closes when done. Your own darktable can stay open meanwhile. It runs with a private copy of your configuration, its own
+library and copies of one raw of the reference set. Scenarios that can't run unattended are
+listed at the end as manual checks. Your library, configuration and photos are not touched
+by either part.
 
 ## darktable setup
 

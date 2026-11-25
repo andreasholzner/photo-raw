@@ -10,6 +10,7 @@ photo_root = "~/Pictures/raw"        # folder that contains the trip folders (re
 
 # [darktable]
 # cli = "darktable-cli"
+# app = "darktable"            # the darktable application, for the self-test's scenarios
 # config_dir = "~/.config/darktable"
 
 # [selftest]
@@ -35,6 +36,7 @@ pub struct Config {
 #[serde(default, deny_unknown_fields)]
 pub struct DarktableConfig {
     pub cli: String,
+    pub app: String,
     pub config_dir: Option<PathBuf>,
 }
 
@@ -42,6 +44,7 @@ impl Default for DarktableConfig {
     fn default() -> Self {
         Self {
             cli: "darktable-cli".into(),
+            app: "darktable".into(),
             config_dir: None,
         }
     }

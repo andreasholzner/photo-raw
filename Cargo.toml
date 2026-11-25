@@ -6,17 +6,17 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.104"
 base64 = "0.23.1"
+cucumber = "0.23"
 clap = { version = "4.6.9", features = ["derive"] }
 flate2 = "1.1.11"
+futures = "0.3.34"
 kamadak-exif = "0.6.2"
 png = "0.18.1"
 roxmltree = "0.21.2"
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.2.2"
+ctrlc = "3.5.3"
 
-[dev-dependencies]
-cucumber = "0.23"
-futures = "0.3.34"
 
 [[test]]
 name = "features"

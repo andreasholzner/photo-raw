@@ -72,7 +72,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-17](#us-17--installation-on-the-owners-machine)             | 📋     | Installation on the owner's machine            | [darktable integration](#darktable-integration) |
 | [US-18](#us-18--aurora-base-pipeline)                           | 📋     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
-| [US-20](#us-20--self-test-checks-darktable-behaviour)           | 📋     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
+| [US-20](#us-20--self-test-checks-darktable-behaviour)           | 🚧     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 
 ### Maintaining this file
 
@@ -180,7 +180,7 @@ how much colour, and how the foreground is handled.
 
 ### US-20 — Self-test checks darktable behaviour
 
-**Planned 📋** — As the owner, I want the self-test to also check the darktable behaviour the tool
+**In progress 🚧** — As the owner, I want the self-test to also check the darktable behaviour the tool
 relies on, so that a darktable upgrade can't silently break it.
 
 **Acceptance criteria:** The self-test also runs the executable scenarios that depend on darktable

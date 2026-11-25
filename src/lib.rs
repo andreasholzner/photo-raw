@@ -9,6 +9,7 @@ pub mod exif;
 pub mod image_diff;
 pub mod locate;
 pub mod reference_set;
+pub mod scenarios;
 pub mod scene;
 pub mod selftest;
 pub mod sidecar;

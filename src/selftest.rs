@@ -59,8 +59,17 @@ pub fn init(cfg: &Config, force: bool) -> Result<bool> {
     Ok(true)
 }
 
-/// Renders the reference set and compares it with the reference. Returns whether all passed.
+/// The whole self-test: the renders of the reference set, then the darktable scenarios.
+/// Returns whether all passed.
 pub fn run(cfg: &Config) -> Result<bool> {
+    let renders_ok = run_renders(cfg)?;
+    println!();
+    let scenarios_ok = scenarios(cfg)?;
+    Ok(renders_ok && scenarios_ok)
+}
+
+/// Renders the reference set and compares it with the reference.
+fn run_renders(cfg: &Config) -> Result<bool> {
     let dirs = Dirs::new(cfg)?;
     if !dirs.reference.exists() {
         bail!("no reference renders yet; run `photoflow selftest init` first");
@@ -120,6 +129,42 @@ pub fn run(cfg: &Config) -> Result<bool> {
         );
         Ok(false)
     }
+}
+
+/// Runs the executable scenarios that depend on darktable against the darktable application
+/// (US-20) and lists the ones that need a manual check. Returns whether all passed.
+pub fn scenarios(cfg: &Config) -> Result<bool> {
+    let base = cfg.data_dir()?.join("selftest").join("scenarios");
+    println!(
+        "Starting darktable for the scenarios (private configuration and library in {}) …",
+        base.display()
+    );
+    let app = crate::scenarios::app::App::start(cfg, &base.join("darktable"))?;
+    let features = crate::scenarios::write_features(&base.join("features"))?;
+    let app = std::sync::Arc::new(std::sync::Mutex::new(app));
+    let ok = crate::scenarios::run(
+        &features,
+        crate::scenarios::Selection::Darktable,
+        Some(app.clone()),
+    );
+    app.lock().unwrap_or_else(|e| e.into_inner()).stop();
+    let manual = crate::scenarios::manual_checks();
+    if !manual.is_empty() {
+        println!("\nManual checks (can't be run unattended; do them after a darktable upgrade):");
+        for m in manual {
+            println!("  - {m}");
+        }
+    }
+    println!();
+    if ok {
+        println!("All darktable scenarios passed.");
+    } else {
+        println!(
+            "Some darktable scenarios failed; darktable's log: {}",
+            base.join("darktable/darktable.log").display()
+        );
+    }
+    Ok(ok)
 }
 
 /// Makes the last run's renders the new reference.
