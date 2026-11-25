@@ -273,15 +273,17 @@ impl App {
         Ok(())
     }
 
-    /// Waits until darktable has rewritten the sidecar (it may not, if nothing changed).
+    /// Waits until darktable has rewritten the sidecar (it may not, if nothing changed), then
+    /// until the file has stopped changing.
     fn wait_for_sidecar(&self, photo: &Path, before: &Option<String>, secs: u64) {
         let start = Instant::now();
         while start.elapsed() < Duration::from_secs(secs) {
             if std::fs::read_to_string(sidecar_of(photo)).ok() != *before {
-                return;
+                break;
             }
             std::thread::sleep(Duration::from_millis(300));
         }
+        settled_sidecar(photo);
     }
 
     pub fn stop(&mut self) {
@@ -323,8 +325,12 @@ impl Driver for App {
         ));
         std::fs::write(&xmp, &self.edit)?;
         let p = photo.to_string_lossy().to_string();
+        let before = std::fs::read_to_string(sidecar_of(&photo)).ok();
         self.call(&["apply_sidecar", &p, &xmp.to_string_lossy()])?;
         self.call(&["touch", &p])?;
+        // darktable writes the sidecar in the background: a read right after the tag change
+        // could still see the unedited one, and the tag would name the wrong history
+        self.wait_for_sidecar(&photo, &before, 20);
         let history = sidecar::read(&sidecar_of(&photo))?;
         self.call(&["tag", &p, &edit_tag(&history)])?;
         Ok(())
@@ -396,9 +402,24 @@ impl Driver for App {
         if !library.darkroom_open {
             // before the tool reads an edit, darktable is made to write the sidecar
             self.call(&["touch", &p])?;
+            settled_sidecar(&photo);
         }
         let history = sidecar::read(&sidecar_of(&photo))?;
         Ok(edit_state(&library, &history))
+    }
+}
+
+/// Waits (up to 10 s) until two reads of the sidecar 0.5 s apart are the same.
+fn settled_sidecar(photo: &Path) {
+    let start = Instant::now();
+    let mut last = std::fs::read_to_string(sidecar_of(photo)).ok();
+    while start.elapsed() < Duration::from_secs(10) {
+        std::thread::sleep(Duration::from_millis(500));
+        let now = std::fs::read_to_string(sidecar_of(photo)).ok();
+        if now == last {
+            return;
+        }
+        last = now;
     }
 }
 
