@@ -40,7 +40,6 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
-| 4    | US-18                       | Aurora base before the aurora auto-edit                                        |
 | 5    | US-7 – US-10                | The tool's core: classify, safety, day and aurora edits                        |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
@@ -70,7 +69,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-15](#us-15--status-across-the-collection)                   | 📋     | Status across the collection                   | [darktable integration](#darktable-integration) |
 | [US-16](#us-16--optional-export-step)                           | 📋     | Optional export step                           | [darktable integration](#darktable-integration) |
 | [US-17](#us-17--installation-on-the-owners-machine)             | 📋     | Installation on the owner's machine            | [darktable integration](#darktable-integration) |
-| [US-18](#us-18--aurora-base-pipeline)                           | 🚧     | Aurora base pipeline                           | [Foundation](#foundation)                       |
+| [US-18](#us-18--aurora-base-pipeline)                           | ✅     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 
@@ -169,18 +168,16 @@ because they depend on the aurora base (US-18). Results go to the journal.
 
 ### US-18 — Aurora base pipeline
 
-**In progress 🚧** — As the owner, I want my aurora photos on the new pipeline too, with less noise
+**Done ✅** — As the owner, I want my aurora photos on the new pipeline too, with less noise
 but without losing the aurora's structure and colour.
 
-**Notes:** A first research-based edit (scene-referred, profiled denoise, one local contrast, no
-haze removal) cut the noise clearly but left a coarser grain and lost much of the aurora's
-structure compared with the current recipe (journal 2026-11-23). Haze removal is unstable on
-night shots. Chosen so far (journal 2026-11-25, rounds 1–2): chroma-only denoise plus a gentle
-luma denoise, "clarity" twice; where the sky's measured luma noise is still above a threshold,
-diffuse "local contrast" replaces both "clarity" passes, which is cleaner. Display transform
-sigmoid "ACES 100-nit like" with "vibrant colors" and extra chroma. Foreground: a masked color
-calibration below the horizon brings the land/snow to its own colour target, since one white
-balance can't serve both sky and foreground (round 3).
+**Acceptance criteria:** Candidates are compared side by side, including 100 % crops, on aurora
+photos of the reference set and the 2026 aurora nights, and the owner picks. Outcome (journal
+2026-11-25, rounds 1–4): scene-referred, chroma-only denoise plus a non-local-means luma denoise,
+local contrast "clarity" twice, no haze removal, tone curve or sharpening; sigmoid "ACES 100-nit
+like" with colour balance rgb "vibrant colors" and extra chroma. The land below the horizon gets
+its own colour correction (a masked color calibration) towards slightly blue snow, since one
+white balance can't serve both sky and foreground. Per-photo values are US-10's.
 
 ### US-20 — Self-test checks darktable behaviour
 
@@ -242,9 +239,14 @@ colourful, not neon — so I can cull after editing.
 (the aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
 default and can be overridden per photo. The brightness target depends on the scene (e.g. a lit
 foreground gets a darker target). The sky targets are derived from the owner's past aurora edits and
-checked on them. Variants for comparison are available. The self-test checks the
+checked on them. The foreground (land below the horizon) gets its own per-photo colour correction
+towards slightly blue snow (US-18). Variants for comparison are available. The self-test checks the
 tool's edits of the reference set's aurora photos like the day edits, and the upgrade block of US-9
 applies.
+
+**Notes:** The foreground correction needs the horizon line per photo, like the gradient filter of
+US-11; in the US-18 experiments it was set by hand. On very dark foregrounds (village lights,
+mountains) the correction made no measurable difference (journal 2026-11-25, round 3).
 
 **Decisions:** US-10 → ADR-0004
 

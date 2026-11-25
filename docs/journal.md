@@ -1052,3 +1052,5 @@ short in B/G). At sheet size N looks olive-grey next to the night sky, B like sn
 violet towards the edges.
 
 Full-size JPGs and sidecars for all columns in `photo-edits/_us18/round4/<folder>/`.
+- **Owner's verdict on round 4:** D at strength 0.7 is fine and replaces E (no noise-dependent
+  switch needed); snow target B looks best.
