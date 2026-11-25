@@ -41,7 +41,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
 | 4    | US-6, US-18                 | Rules validated on more edited photos; aurora base before the aurora auto-edit |
-| 5    | US-7 – US-10, US-20         | The tool's core: classify, safety, day and aurora edits                        |
+| 5    | US-7 – US-10                | The tool's core: classify, safety, day and aurora edits                        |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
 
@@ -72,7 +72,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-17](#us-17--installation-on-the-owners-machine)             | 📋     | Installation on the owner's machine            | [darktable integration](#darktable-integration) |
 | [US-18](#us-18--aurora-base-pipeline)                           | 📋     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
-| [US-20](#us-20--self-test-checks-darktable-behaviour)           | 🚧     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
+| [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 
 ### Maintaining this file
 
@@ -180,13 +180,12 @@ how much colour, and how the foreground is handled.
 
 ### US-20 — Self-test checks darktable behaviour
 
-**In progress 🚧** — As the owner, I want the self-test to also check the darktable behaviour the tool
+**Done ✅** — As the owner, I want the self-test to also check the darktable behaviour the tool
 relies on, so that a darktable upgrade can't silently break it.
 
 **Acceptance criteria:** The self-test also runs the executable scenarios that depend on darktable
 (ADR-0006): those tagged `@darktable` against the darktable application with a private
-configuration and library, those tagged `@darktable-cli` against darktable-cli. They run on the
-owner's machine, with its darktable and desktop, as part of the self-test, and in the development
+configuration and library. They run on the owner's machine, with its darktable and desktop, as part of the self-test, and in the development
 container. Scenarios that can't be run unattended are listed as manual checks.
 
 **Notes:** A spike showed that a Lua script can drive everything US-8's scenarios need
@@ -202,7 +201,8 @@ to be asked only where it is unclear.
 **Acceptance criteria:** [us-07-classify-day-night-and-aurora.feature](../features/us-07-classify-day-night-and-aurora.feature)
 
 **Notes:** Open: whether night photos without aurora get a generic night edit instead of becoming a
-question.
+question. The aurora check is the first scenario the self-test runs with darktable-cli
+(`@darktable-cli`, ADR-0006); that part of the self-test is built with it.
 
 ### US-8 — Only touch what was handed over
 
