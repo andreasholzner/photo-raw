@@ -218,11 +218,12 @@ process and every edit I made by hand.
 **Planned 📋** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
 I only correct outliers.
 
-**Acceptance criteria:** One of the two day looks (US-3), proposed per photo, plus local contrast
-"clarity"; "dehaze" proposed for long-range views (US-4). No sharpening in the edit (print
-sharpening comes with the export, US-5). Exposure per photo by the look's rule — highlights for
-sigmoid, midtones for AgX — validated by US-6. The owner can switch the look and the dehaze proposal
-per photo; the switches are kept as data for the rules. Photos where a rule is uncertain are
+**Acceptance criteria:** One of the two day looks (US-3) — AgX punchy by default, since no rule
+predicted the owner's choice (US-6) — plus local contrast "clarity"; "dehaze" proposed for
+long-range views (US-4). No sharpening in the edit (print sharpening comes with the export, US-5).
+Exposure per photo by the look's rule, with the targets found in US-6: the brightest 1 % for
+sigmoid, the brightest 10 % for AgX. The owner can switch a photo to sigmoid and switch the dehaze
+proposal per photo; the switches are kept as data for a later look rule. Photos where a rule is uncertain are
 flagged. The self-test (US-2) also checks the tool's edits of the reference set's day photos against
 the tool's previous output; intended changes become the new baseline. After a darktable upgrade,
 automatic edits are blocked until the self-test has run and its result was accepted.
@@ -250,7 +251,9 @@ applies.
 than the land.
 
 **Notes:** Applied as a separate, easily removed step and listed for confirmation. Density and
-angle from my past usage (US-6).
+angle from my past usage (US-6). The sky-versus-land brightness alone is a weak trigger: about
+half of such proposals would match where the owner used a filter (US-6, journal 2026-11-25); a
+better signal is still to be found. The filter's position follows the horizon.
 
 ### US-19 — Own edits recognised after a darktable upgrade
 
