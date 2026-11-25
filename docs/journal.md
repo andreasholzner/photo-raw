@@ -1020,3 +1020,35 @@ either way: the owner would rather treat a barely visible aurora as a night phot
   colour structure (foliage) → would be taken for aurora. Rare; the EXIF rule can't see it.
 - Reference set: _DSC3735 (bright green aurora) 0.040, _DSC0906 (stars, summit cross) 0.002;
   _DSC7305 (weak aurora under a near-full moon) 0.004 → a question.
+
+### 2026-11-25 — US-18, round 4: luma-denoise strength and the snow colour target
+
+Same 8 photos as round 3, S+ look, F3 foreground step; sky exposure and WB as before.
+
+**Luma denoise.** D's gentle non-local means had strength 0.35 only because the owner's preset
+"sanft" uses it; tested 0.2, 0.35, 0.5, 0.7 (all with "clarity" twice), plus E (strength 0.35 with
+diffuse "local contrast") for reference. Sheets `photo-edits/_us18/round4/denoise_<photo>.png`
+(columns 0.2, 0.35, 0.5, 0.7, E). Sky noise (as in round 2, ×1000):
+
+| photo | 0.2 | 0.35 | 0.5 | 0.7 | E |
+|---|---|---|---|---|---|
+| _DSC8300 | 20.3 | 15.3 | 12.4 | 10.1 | 9.8 |
+| _DSC7371 | 19.5 | 14.8 | 11.7 | 9.3 | 10.0 |
+| _DSC7579 | 17.6 | 14.0 | 11.7 | 9.8 | 10.0 |
+| _DSC7305 | 15.9 | 11.2 | 9.0 | 7.6 | 8.9 |
+| _DSC8305 | 15.5 | 11.0 | 8.8 | 7.2 | 8.1 |
+| _DSC8287 | 8.1 | 5.4 | 4.2 | 3.4 | 3.9 |
+| _DSC8257 | 6.2 | 4.5 | 3.8 | 3.3 | 3.7 |
+| _DSC8296 | 5.0 | 3.8 | 3.4 | 3.1 | 3.6 |
+
+- D at strength 0.7 is as clean as E on every photo while keeping "clarity" twice — so a stronger
+  luma denoise could replace the D→E switch, if it doesn't cost the aurora's fine structure or the
+  stars (to be judged on the crops).
+
+**Snow colour target** for F3: N neutral (R/G 1.0, B/G 1.0), B slightly blue (0.95 / 1.25, rounds
+3), B+ bluer (0.9 / 1.45). Sheets `photo-edits/_us18/round4/snow_<photo>.png` (columns N, B, B+;
+full frame, foreground crop). Reached on all photos except _DSC7371 (orange light pollution, ≈ 0.1
+short in B/G). At sheet size N looks olive-grey next to the night sky, B like snow at night, B+
+violet towards the edges.
+
+Full-size JPGs and sidecars for all columns in `photo-edits/_us18/round4/<folder>/`.
