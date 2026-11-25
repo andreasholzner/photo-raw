@@ -62,7 +62,8 @@ fn decode(s: &str) -> Result<Vec<u8>> {
         .collect()
 }
 
-fn parse(text: &str) -> Result<History> {
+/// Reads a sidecar from its text.
+pub fn parse(text: &str) -> Result<History> {
     let doc = roxmltree::Document::parse(text)?;
     let desc = doc
         .descendants()

@@ -59,8 +59,8 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-4](#us-4--haze-and-clarity)                                 | ✅     | Haze and clarity                               | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)                   | ✅     | Print sharpening in the export                 | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)                   | 🚧     | More analysis on edited photos                 | [Foundation](#foundation)                       |
-| [US-7](#us-7--classify-day-night-and-aurora)                    | 📋     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
-| [US-8](#us-8--only-touch-what-was-handed-over)                  | 📋     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
+| [US-7](#us-7--classify-day-night-and-aurora)                    | 🚧     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
+| [US-8](#us-8--only-touch-what-was-handed-over)                  | 🚧     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
 | [US-9](#us-9--day-auto-edit)                                    | 📋     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
 | [US-10](#us-10--aurora-auto-edit)                               | 📋     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
 | [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
@@ -82,6 +82,8 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 - A story keeps its title once given: the table links to the story by its heading.
 - A story whose criteria are not yet worked out carries **Notes** instead of **Acceptance
   criteria**; the label changes when the story is refined.
+- Testable acceptance criteria live in the story's feature file in [features/](../features/)
+  (ADR-0006); the story links to it and keeps in prose only what can't be executed.
 
 ## Foundation
 
@@ -193,23 +195,20 @@ still to be checked (spike).
 
 ### US-7 — Classify day, night and aurora
 
-**Planned 📋** — As the owner, I want photos sorted into day, night and aurora automatically, and
+**In progress 🚧** — As the owner, I want photos sorted into day, night and aurora automatically, and
 to be asked only where it is unclear.
 
-**Acceptance criteria:** Scene brightness from EXIF (EV100): ≤ 1 is night, ≥ 8 is day, in between
-becomes an open question. Night photos are checked for aurora (colour in the sky on a small
-render); night photos without aurora get a generic night edit or become a question.
+**Acceptance criteria:** [us-07-classify-day-night-and-aurora.feature](../features/us-07-classify-day-night-and-aurora.feature)
+
+**Notes:** Open: whether night photos without aurora get a generic night edit instead of becoming a
+question.
 
 ### US-8 — Only touch what was handed over
 
-**Planned 📋** — As the owner, I want the tool to leave alone everything it wasn't asked to
+**In progress 🚧** — As the owner, I want the tool to leave alone everything it wasn't asked to
 process and every edit I made by hand.
 
-**Acceptance criteria:** Only newly imported or selected photos are processed. Photos with a
-manual edit are skipped and reported. Running the tool again on the same photos changes nothing
-that was already right. The tool recognises its own edits by a fingerprint of the history it wrote,
-kept as a tag under `photoflow|`; a photo whose history differs from its fingerprint counts as edited
-by hand. A photo whose sidecar is older than its state in darktable's library is not touched.
+**Acceptance criteria:** [us-08-only-touch-what-was-handed-over.feature](../features/us-08-only-touch-what-was-handed-over.feature)
 
 **Decisions:** US-8 → ADR-0003
 
