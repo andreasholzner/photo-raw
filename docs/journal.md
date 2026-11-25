@@ -917,3 +917,33 @@ and foreground); full-size JPGs and sidecars per variant in `photo-edits/_us18/<
 - **Solver:** WB didn't reach the target where the owner's edit has an unusual sky background
   (_DSC6085 village lights, _DSC7371 yellowish, _DSC3492 strong blue): blue gain at its limit,
   so those columns differ in colour from A beyond the recipe.
+
+### 2026-11-25 — US-18, round 2: display transform and colour, with D and E
+
+Same 9 photos; round 1's D (chroma only + gentle non-local means + "clarity" twice) and E (same
+denoise + diffuse "local contrast | normal"), each in three looks: **S** sigmoid "ACES 100-nit
+like" + "vibrant colors" (round 1), **S+** the same with chroma 0.20 (the old recipe's chroma
+push), **X** AgX "blender-like|punchy". Exposure and WB solved per display transform against
+column A, shared by D/E and S/S+. Sheets `photo-edits/_us18/round2/sheet_<photo>.png`, columns
+A, D-S, E-S, D-S+, E-S+, D-X, E-X; full-size JPGs and sidecars in `photo-edits/_us18/round2/<folder>/`.
+
+Luma noise in a sky patch (std. of pixel minus 3×3 mean, ×1000; lower is cleaner):
+
+| photo | A | D-S | E-S | D-S+ | E-S+ | D-X | E-X |
+|---|---|---|---|---|---|---|---|
+| _DSC8287 | 24.8 | 5.4 | 3.9 | 5.4 | 3.9 | 4.8 | 3.4 |
+| _DSC8257 | 17.3 | 4.4 | 3.6 | 4.5 | 3.7 | 4.1 | 3.2 |
+| _DSC8296 | 15.0 | 3.7 | 3.5 | 3.8 | 3.6 | 3.3 | 2.9 |
+| _DSC8300 | 33.4 | 15.1 | 9.6 | 15.3 | 9.8 | 13.9 | 8.3 |
+| _DSC8305 | 29.2 | 10.9 | 7.9 | 11.0 | 8.1 | 10.3 | 7.3 |
+| _DSC3492 | 9.4 | 11.5 | 10.5 | 10.9 | 9.9 | 8.9 | 8.0 |
+| _DSC7371 | 27.3 | 14.6 | 9.8 | 14.8 | 10.0 | 13.9 | 9.3 |
+| _DSC7305 | 12.5 | 10.9 | 8.7 | 11.2 | 8.9 | 9.9 | 7.7 |
+| _DSC6085 | 5.5 | 5.3 | 3.2 | 5.3 | 3.2 | 5.3 | 3.0 |
+
+- **Noise:** D is at a third to a half of A's noise on the noisy 2024/2026 shots; E removes
+  another 25–40 %. The hardest cases for D are the long dark exposures (_DSC8300, _DSC7371:
+  ≈ 15 vs. E ≈ 10). _DSC3492 (2019) is the only photo where the owner's edit is cleaner than D.
+  AgX comes out slightly less noisy than sigmoid at the same sky brightness.
+- **Look (sheet size):** S+ is a little more colourful than S, still far from A's neon green;
+  X is softer, with lifted shadows and more muted colour.
