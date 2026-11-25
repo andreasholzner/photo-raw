@@ -993,3 +993,30 @@ Foreground colour (R/G / B/G of the middle luminance band; target 0.95 / 1.25):
 - Needed for automation: a horizon line per photo (also for US-11).
 - **Owner's verdict on round 3:** F1 and F3 look the same on most photos → F3 (color calibration,
   the documented tool).
+
+### 2026-11-25 — US-7: what tells aurora from other night photos
+
+All 130 night photos up to 2026 (EV100 ≤ 1, all ILCE-6000), rendered at 300 px with a fixed
+neutral check edit: linear, fixed WB, no tone mapping, no denoise. Labels: the aurora photos
+identified on 2026-11-21 plus the 2026 aurora nights, the rest by eye; the doubtful ones by the
+owner. Weak, diffuse or underexposed aurora (_DSC8234–8239, 7302, 7305, 3437, 3721, 3904) may go
+either way: the owner would rather treat a barely visible aurora as a night photo than make it
+"pop" (noise, and not what was seen). → 75 aurora, 44 not, 11 either.
+
+- **Green pixels in the sky** (share of sky pixels clearly greener than the sky's median colour):
+  fails on weak aurora under light pollution or moonlight, where the whole sky is yellow — many
+  clear aurora photos score 0.
+- **Colour structure in the sky** works: chromaticity per 10×10-px block in the upper 55 % of the
+  frame, minus a smooth quadratic fit across the sky, 90th percentile of the residual. Light
+  pollution, twilight and moonlight change colour smoothly; aurora comes in bands and curtains.
+  Green channel: non-aurora ≤ 0.0102 (moonlit peaks reaching into the sky, Rosengarten 2018),
+  aurora ≥ 0.0103 except _DSC3896/3897 (small aurora under bright clouds) and _DSC7367 (light
+  pollution). Red, or red and green together, separate worse (mountains and city lights add red
+  structure); the upper 40 % instead of 55 % also worse.
+- **Threshold ≈ 0.011** (a margin above the highest non-aurora): 6 of 75 aurora photos become
+  the question "night photo without aurora", no non-aurora photo is taken for aurora — the safe
+  direction, since a wrong aurora edit would go unnoticed. All "either way" photos fall below.
+- _DSC0666, a long exposure of a small waterfall, counts as night by its exposure and has strong
+  colour structure (foliage) → would be taken for aurora. Rare; the EXIF rule can't see it.
+- Reference set: _DSC3735 (bright green aurora) 0.040, _DSC0906 (stars, summit cross) 0.002;
+  _DSC7305 (weak aurora under a near-full moon) 0.004 → a question.
