@@ -809,3 +809,49 @@ runner and notes in `spikes/us-20-darktable-tests/`. Fingerprints are the tool's
 - Lua reports the library change time as locale-formatted text in whole seconds (empty, or
   "01/01/1", when unset). The "darkroom-image-loaded" event came ~12 s after switching images.
 
+### 2026-11-25 — US-6: day rules checked on all 706 edited day photos of 2022–2025
+
+Method (`experiments/us6_*.py`): every day photo (EV100 ≥ 8) of 2022–2025 in the US-9 day edit
+(the owner's non-tone steps, haze removal replaced by "clarity", one display transform: sigmoid
+ACES + "vibrant colors" or AgX punchy), 500 px renders with darktable 5.6.1. Per photo the
+exposure was solved to match the owner's edit — highlights (brightest 1 %) for sigmoid, midtones
+for AgX, as in US-3 — and every probe kept, so fixed-target rules could be evaluated afterwards.
+"Error" = rule exposure minus owner-matched exposure. Photos whose target the look can't reach
+were left out (sigmoid 7, AgX 2: the owner's highlights clipped above 1.0).
+
+**The owner's edits are less uniform than the 37-photo sample suggested:** brightest 1 % at
+0.83–0.91 (middle half; the sample: 0.86–0.91), midtones 0.38–0.57; per year the midtones move a
+lot (2024: 0.59, winter trips; 2023: 0.42).
+
+| Rule | median error | within ±0.25 EV | within ±0.5 EV |
+|---|---|---|---|
+| sigmoid, same exposure for all | 0.64 EV | 21 % | 40 % |
+| **sigmoid, brightest 1 % at 0.885** | **0.31 EV** | 42 % | 67 % |
+| sigmoid, brightest 1 % — fitted 2022–23, checked on 2024–25 | 0.26 EV | 49 % | 70 % |
+| sigmoid, brightest 1 % — fitted 2024–25, checked on 2022–23 | 0.36 EV | 39 % | 64 % |
+| AgX, same exposure for all | 0.63 EV | 22 % | 41 % |
+| AgX, midtones at 0.495 | 0.65 EV | 20 % | 38 % |
+| **AgX, brightest 10 % at 0.675** | **0.28 EV** | 45 % | 72 % |
+| AgX, sigmoid's highlight exposure +0.28 EV | 0.33 EV | 38 % | 71 % |
+
+- The highlight rule holds for sigmoid (stable target across years: 0.88–0.89), but much
+  looser than on the 37 photos it was fitted on (34/37 within ±0.5 EV then, 67 % now).
+- **A fixed midtone target doesn't work for AgX**: the owner's midtones vary too much by scene
+  (snow); a target on the brightest 10 % does better. Fitting the midtone target on one half of
+  the years and checking on the other is off by ±0.4–0.7 EV.
+- The "truth" is the owner's old edit translated into the new look; part of the spread may be
+  the translation, not the owner's taste.
+- Largest misses: photos with clipped highlights in the owner's edit (sigmoid), bright snow
+  scenes of 2024 (AgX).
+
+**Gradient filter** (213 of 706 photos; density 1.0 in 63 %, no rotation in 76 %, hardness ~47):
+the sky-versus-land brightness in the sigmoid render without the filter separates used from not
+used only weakly (AUC 0.70; median log2 ratio +0.68 vs +0.30). As a proposal: threshold 0.75 →
+210 proposals, half of them where the owner used one, catching 47 % of the uses. Where used
+without rotation, the filter's position follows the horizon (correlation 0.59); its offset value
+is typically 8 higher than the horizon's position in % from the top (what darktable's offset
+measures from is unverified).
+
+Look-choice check: 50 random photos on `photo-edits/_us6/looks_01..10.png` (columns: owner's
+edit, sigmoid ACES + vibrant, AgX punchy; both matched to the owner's edit), `index.tsv` maps
+sheet/row to the file; the US-3 rule's predictions are kept back until the owner has picked.
