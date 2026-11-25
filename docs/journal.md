@@ -947,3 +947,7 @@ Luma noise in a sky patch (std. of pixel minus 3×3 mean, ×1000; lower is clean
   AgX comes out slightly less noisy than sigmoid at the same sky brightness.
 - **Look (sheet size):** S+ is a little more colourful than S, still far from A's neon green;
   X is softer, with lifted shadows and more muted colour.
+- **Owner's verdict on round 2:** S+ preferred. D preferred unless too noisy, then E; the measured
+  sky noise matches what the owner sees as noisy. Too noisy in D: _DSC8300, _DSC7371, _DSC7305,
+  _DSC8305 (D noise 11–15); fine: the four at ≤ 5.4; _DSC3492 (10.9) D ≈ E. → Switch to E when D's
+  noise is above about 8–10.

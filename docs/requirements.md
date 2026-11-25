@@ -175,8 +175,11 @@ but without losing the aurora's structure and colour.
 **Notes:** A first research-based edit (scene-referred, profiled denoise, one local contrast, no
 haze removal) cut the noise clearly but left a coarser grain and lost much of the aurora's
 structure compared with the current recipe (journal 2026-11-23). Haze removal is unstable on
-night shots. Open: denoise settings that keep fine structure and stars, which display transform,
-how much colour, and how the foreground is handled.
+night shots. Chosen so far (journal 2026-11-25, rounds 1–2): chroma-only denoise plus a gentle
+luma denoise, "clarity" twice; where the sky's measured luma noise is still above a threshold,
+diffuse "local contrast" replaces both "clarity" passes, which is cleaner. Display transform
+sigmoid "ACES 100-nit like" with "vibrant colors" and extra chroma. Open: how the foreground is
+handled.
 
 ### US-20 — Self-test checks darktable behaviour
 
