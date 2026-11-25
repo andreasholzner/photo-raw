@@ -991,3 +991,5 @@ Foreground colour (R/G / B/G of the middle luminance band; target 0.95 / 1.25):
   looks more neutral, F1 can tip into brown (_DSC7579). F2 only goes half-way and also shifts the
   sky — a single WB can't serve both.
 - Needed for automation: a horizon line per photo (also for US-11).
+- **Owner's verdict on round 3:** F1 and F3 look the same on most photos → F3 (color calibration,
+  the documented tool).
