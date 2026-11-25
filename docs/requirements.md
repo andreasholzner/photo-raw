@@ -40,7 +40,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
-| 4    | US-6, US-18                 | Rules validated on more edited photos; aurora base before the aurora auto-edit |
+| 4    | US-18                       | Aurora base before the aurora auto-edit                                        |
 | 5    | US-7 – US-10                | The tool's core: classify, safety, day and aurora edits                        |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
@@ -58,7 +58,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-3](#us-3--modern-base-pipeline)                             | ✅     | Modern base pipeline                           | [Foundation](#foundation)                       |
 | [US-4](#us-4--haze-and-clarity)                                 | ✅     | Haze and clarity                               | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)                   | ✅     | Print sharpening in the export                 | [Foundation](#foundation)                       |
-| [US-6](#us-6--more-analysis-on-edited-photos)                   | 🚧     | More analysis on edited photos                 | [Foundation](#foundation)                       |
+| [US-6](#us-6--more-analysis-on-edited-photos)                   | ✅     | More analysis on edited photos                 | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)                    | 🚧     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)                  | 🚧     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
 | [US-9](#us-9--day-auto-edit)                                    | 📋     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
@@ -151,7 +151,7 @@ contain no sharpening (US-9).
 
 ### US-6 — More analysis on edited photos
 
-**In progress 🚧** — As the owner, I want the rules checked against more of my edited photos before I
+**Done ✅** — As the owner, I want the rules checked against more of my edited photos before I
 rely on them.
 
 **Acceptance criteria:** The rules of the day auto-edit are checked on all of the owner's edited day

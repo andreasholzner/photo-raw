@@ -852,9 +852,17 @@ without rotation, the filter's position follows the horizon (correlation 0.59); 
 is typically 8 higher than the horizon's position in % from the top (what darktable's offset
 measures from is unverified).
 
-Look-choice check: 50 random photos on `photo-edits/_us6/looks_01..10.png` (columns: owner's
-edit, sigmoid ACES + vibrant, AgX punchy; both matched to the owner's edit), `index.tsv` maps
-sheet/row to the file; the US-3 rule's predictions are kept back until the owner has picked.
+**Look choice** on 50 random photos (`photo-edits/_us6/looks_01..10.png`; columns: owner's edit,
+sigmoid ACES + vibrant, AgX punchy, both matched to the owner's edit; `index.tsv` maps sheet/row
+to the file). The rule's predictions were stored before the owner picked.
+- Owner's picks: **32 × AgX, 16 × sigmoid**, 2 × neither (_DSC7634, _DSC7632: bright 2024 snow
+  scenes, also among the AgX exposure misses). In US-3 it was 9 sigmoid : 6 AgX on 15 photos.
+- The US-3 rule ("snow share or strong-colour share > 0.14 → sigmoid, else AgX") is right on
+  **17 of 48** — worse than "always AgX" (32 of 48). It even points the wrong way: photos picked
+  sigmoid have less snow (median share 0.10 vs 0.18) and somewhat more colour (90th percentile of
+  chroma 0.32 vs 0.27). The snow and colour measures were re-implemented here, so not identical
+  to US-3's, but that doesn't explain a reversed direction.
+→ No simple rule found for the look; AgX is the owner's more frequent choice.
 
 ### 2026-11-25 — US-20: the US-8 scenarios against the real darktable
 
