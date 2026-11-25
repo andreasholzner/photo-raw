@@ -99,7 +99,7 @@ impl App {
                 "darktable is set to never write sidecar files, which photoflow relies on (preferences → storage → write sidecar file for each image)"
             );
         }
-        std::fs::write(config.join("darktablerc"), rc)?;
+        std::fs::write(config.join("darktablerc"), without_welcome_screen(&rc))?;
         if owner.join("data.db").is_file() {
             std::fs::copy(owner.join("data.db"), config.join("data.db"))?;
         }
@@ -414,4 +414,26 @@ fn copy_dir(from: &Path, to: &Path) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// The private configuration starts with a new library, for which darktable shows its welcome
+/// dialog; it isn't needed for an unattended run.
+fn without_welcome_screen(rc: &str) -> String {
+    let mut out: Vec<&str> = rc
+        .lines()
+        .filter(|l| !l.starts_with("ui/show_welcome_screen="))
+        .collect();
+    out.push("ui/show_welcome_screen=FALSE");
+    out.join("\n") + "\n"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn welcome_screen_is_switched_off() {
+        let rc = without_welcome_screen("a=1\nui/show_welcome_screen=TRUE\nb=2\n");
+        assert_eq!(rc, "a=1\nb=2\nui/show_welcome_screen=FALSE\n");
+    }
 }
