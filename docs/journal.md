@@ -756,3 +756,56 @@ darktable-cli facts learned:
 - With `data.db` in use, **only one darktable-cli process per config dir** at a time (parallel
   runs fail).
 - `--style` must come before `--core`.
+
+### 2026-11-24 — What darktable-cli can verify for US-8 (testing strategy, ADR-0006)
+
+Copies of one 2025 raw in throwaway folders, the owner's darktable configuration
+(`write_sidecar_files=on import`), darktable 5.6.1, a library *file* instead of `:memory:`.
+- **darktable-cli never writes sidecars**, also with a library file and "on import".
+- It **does fill the library file**: without a sidecar the history holds only what darktable
+  applies on import (workflow defaults, automatic presets), and darktable's history hashes say
+  *not altered* (auto hash = current hash) — the basis of Lua's `is_altered`. With the owner's
+  sidecar loaded, the library history is exactly its 15 steps.
+- It keeps **no change time** in the library (−1 or empty) → the sidecar-lag rule can't be
+  checked with darktable-cli.
+- An exported JPEG embeds the full history, written by darktable's XMP code. Fingerprint
+  (US-8) of the embedded history vs. the input sidecar:
+  - **sidecar from an older darktable: fingerprint changes.** 5.6.1 converts modules to their
+    current version while loading (demosaic 4→6, denoiseprofile 11→12, exposure 6→7) and writes
+    the converted parameters.
+  - **sidecar already in 5.6.1's module versions: fingerprint stable**, with a library file and
+    in memory, also for a history with drawn masks (_DSC7382).
+  → After a darktable upgrade that raises the version of a module in the tool's edit, the tool's
+  earlier edits stop matching their fingerprint once darktable writes them again, and count as
+  edited by hand (safe, but the tool can't redo them).
+- Coverage of US-8's darktable assumptions: "unaltered after import" and "darktable writing the
+  same edit in its own way" (same version, incl. masks) — darktable-cli; library change time,
+  sidecar written after a change, undo and "compress history" — only the darktable application.
+
+### 2026-11-24 — US-20 spike: driving darktable from Lua for the `@darktable` scenarios
+
+darktable 5.6.1 (Lua API 9.7.0) under a virtual display (Xvfb) in the container, the owner's
+configuration copied, throwaway library, copies of two 2025 raws, run fully unattended; script,
+runner and notes in `spikes/us-20-darktable-tests/`. Fingerprints are the tool's (US-8).
+- **Everything US-8 needs can be driven from Lua:** import, `apply_sidecar`, tags, opening the
+  darkroom, changing a module (`dt.gui.action` on the exposure slider), undo
+  (`views/darkroom/undo`) and compressing the history (`lib/history/compress history stack`).
+  Pitfalls: the darkroom only opens an image that is in the lighttable's collection; acting
+  before the darkroom has loaded the image crashed darktable; undo only works within the same
+  darkroom visit; `apply_sidecar` silently ignores a file whose name doesn't end in `.xmp`;
+  `display_image` of the image already shown crashed darktable; `global/quit` doesn't quit 5.6.1.
+- **Fingerprints with an edit in 5.6.1 module versions:** after `apply_sidecar` and darktable's
+  own sidecar write = the tool's file; change → different; change + undo → the same again;
+  compress history → unchanged. With an edit from an older darktable, merely opening it in the
+  darkroom converted its modules (US-19).
+- **When darktable writes the sidecar:** `apply_sidecar` updates only the library (`is_altered`,
+  change time), not the file; a tag change writes it at once. Changes in the lighttable (a
+  style) are in the sidecar within 1 s. **Changes in the darkroom reach the sidecar only when the
+  darkroom is left** (not within 5 minutes while the image stayed open; 1–16 s after leaving).
+- **A sidecar can be stale and look current:** a tag change while the image was open in the
+  darkroom wrote a sidecar with the library's *new* change time but the *old* history. The
+  planned rule "sidecar older than the library → not trusted" would have passed it, and the
+  tool would have taken the owner's unfinished darkroom work for its own edit.
+- Lua reports the library change time as locale-formatted text in whole seconds (empty, or
+  "01/01/1", when unset). The "darkroom-image-loaded" event came ~12 s after switching images.
+
