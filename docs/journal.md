@@ -887,3 +887,33 @@ in the library: 12 → 11 entries). Learned on the way:
 - The test darktable runs in its own process group (so it can be ended completely); Ctrl+C
   therefore reached only photoflow and left darktable running → photoflow now ends it on
   Ctrl+C, and a leftover from a run that ended abruptly is ended at the next start.
+
+### 2026-11-25 — US-18, round 1: denoise and local contrast for the aurora base
+
+9 aurora photos (2026 favourites _DSC8257, 8287, 8296, 8300, 8305; reference set _DSC3492, 7371,
+7305, 6085), darktable 5.6.1, full size. All new columns: scene-referred, the owner's 12mm lens
+preset, sigmoid "ACES 100-nit like" + colour balance rgb "vibrant colors" (the day look), no haze
+removal, tone curve, highpass or sharpening. One exposure and WB per photo, solved so that sky
+median and sky-background colour match column A; only denoise and local contrast differ.
+Sheets `photo-edits/_us18/sheet_<photo>.png` (row 1 full frame, rows 2–3 100 % crops of aurora
+and foreground); full-size JPGs and sidecars per variant in `photo-edits/_us18/<folder>/`.
+
+| | denoise | local contrast |
+|---|---|---|
+| A | owner-approved edit (2026: the recipe; older: the owner's own edit) | |
+| B | profiled, non-local means default (research edit of 2026-11-23) | "clarity" once |
+| C | profiled "wavelets: chroma only" | "clarity" twice |
+| D | chroma only + the owner's "sanft" non-local means (strength 0.35) | "clarity" twice |
+| E | as D | diffuse or sharpen "local contrast \| normal" |
+
+- **Noise:** A is by far the noisiest; B, D and E are clean at 100 %, C keeps a fine luma grain
+  (finer than B's coarse grain). Full-size JPG size as a rough noise measure on _DSC8287:
+  A 5.4 MB, C 4.1, D 2.5, B 1.8, E 1.8.
+- **Structure and stars:** "clarity" twice (C, D) keeps more of the aurora's rays than B; stars
+  stay visible in C and D, fainter in B and E. E looks flatter, with lifted blacks.
+- **Colour:** all new columns are less saturated than A ("vibrant colors" vs. the recipe's pushed
+  colour balance) — not the subject of this round; colour and the display transform (sigmoid vs.
+  AgX) come next.
+- **Solver:** WB didn't reach the target where the owner's edit has an unusual sky background
+  (_DSC6085 village lights, _DSC7371 yellowish, _DSC3492 strong blue): blue gain at its limit,
+  so those columns differ in colour from A beyond the recipe.

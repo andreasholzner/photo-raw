@@ -70,7 +70,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-15](#us-15--status-across-the-collection)                   | 📋     | Status across the collection                   | [darktable integration](#darktable-integration) |
 | [US-16](#us-16--optional-export-step)                           | 📋     | Optional export step                           | [darktable integration](#darktable-integration) |
 | [US-17](#us-17--installation-on-the-owners-machine)             | 📋     | Installation on the owner's machine            | [darktable integration](#darktable-integration) |
-| [US-18](#us-18--aurora-base-pipeline)                           | 📋     | Aurora base pipeline                           | [Foundation](#foundation)                       |
+| [US-18](#us-18--aurora-base-pipeline)                           | 🚧     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 
@@ -169,7 +169,7 @@ because they depend on the aurora base (US-18). Results go to the journal.
 
 ### US-18 — Aurora base pipeline
 
-**Planned 📋** — As the owner, I want my aurora photos on the new pipeline too, with less noise
+**In progress 🚧** — As the owner, I want my aurora photos on the new pipeline too, with less noise
 but without losing the aurora's structure and colour.
 
 **Notes:** A first research-based edit (scene-referred, profiled denoise, one local contrast, no
