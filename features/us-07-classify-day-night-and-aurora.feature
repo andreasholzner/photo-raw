@@ -21,14 +21,16 @@ Feature: US-7 — Classify day, night and aurora
         | Night limit: EV100 1 is still night | 2       | f/2      | 100 | 1.0   | night   |
         | Day limit: EV100 8 is already day   | 1       | f/16     | 100 | 8.0   | day     |
 
-    @wip
     Scenario: An unclear photo becomes a question
       Given a photo with scene brightness 5
       When the photos are processed
       Then the open step "day or night?" lists the photo
 
-  @wip @darktable-cli
+  @darktable-cli
   Rule: Night photos are checked for aurora
+    Aurora shows as colour structure in the sky — bands and curtains — while light pollution,
+    twilight and moonlight change the sky's colour smoothly. A weak or diffuse aurora becomes a
+    question, like a night photo without aurora: making it "pop" would mostly show noise.
 
     Scenario: Colour in the night sky means aurora
       Given a night photo with a green band in the sky

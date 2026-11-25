@@ -55,7 +55,8 @@ impl Darktable {
         Ok(text.lines().next().unwrap_or("").trim().to_string())
     }
 
-    /// Renders `source` with the edit in `xmp` to the PNG `out`, longest edge `size` pixels.
+    /// Renders `source` with the edit in `xmp` to `out`, longest edge `size` pixels. The format
+    /// follows `out`'s extension: `.png` for 8-bit display output, `.pfm` for linear floats.
     pub fn render(&self, source: &Path, xmp: &Path, out: &Path, size: u32) -> Result<()> {
         let name = source.file_name().context("source without file name")?;
         let link = self.links.join(name);

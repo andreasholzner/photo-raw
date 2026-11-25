@@ -205,8 +205,7 @@ to be asked only where it is unclear.
 **Acceptance criteria:** [us-07-classify-day-night-and-aurora.feature](../features/us-07-classify-day-night-and-aurora.feature)
 
 **Notes:** Open: whether night photos without aurora get a generic night edit instead of becoming a
-question. The aurora check is the first scenario the self-test runs with darktable-cli
-(`@darktable-cli`, ADR-0006); that part of the self-test is built with it.
+question.
 
 ### US-8 — Only touch what was handed over
 

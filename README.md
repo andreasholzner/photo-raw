@@ -32,8 +32,9 @@ things:
 
 - **Rendering:** darktable still renders a fixed set of your edited photos
   ([data/reference-set.toml](data/reference-set.toml)) as before.
-- **darktable's behaviour:** the scenarios tagged `@darktable` in [features/](features/) — the
-  things photoflow relies on, such as recognising its own edits and leaving yours alone.
+- **darktable's behaviour:** the scenarios tagged `@darktable-cli` and `@darktable` in
+  [features/](features/) — the things photoflow relies on, such as recognising aurora on a
+  render, recognising its own edits and leaving yours alone.
 
 ```sh
 photoflow selftest init       # once: render the set and store it as the reference
@@ -46,7 +47,8 @@ Renders are stored in `~/.local/share/photoflow/selftest/` (`reference/`, `curre
 you can open side by side. darktable-cli runs with a private copy of your darktable
 configuration and an in-memory library.
 
-For the scenarios, **a darktable window opens and works by itself for a few minutes — don't
+The `@darktable-cli` scenarios first render two photos of the reference set small, with
+darktable-cli (a few seconds). For the other scenarios, **a darktable window opens and works by itself for a few minutes — don't
 touch it**; it closes when done. Your own darktable can stay open meanwhile. It runs with a private copy of your configuration, its own
 library and copies of one raw of the reference set. Scenarios that can't run unattended are
 listed at the end as manual checks. Your library, configuration and photos are not touched

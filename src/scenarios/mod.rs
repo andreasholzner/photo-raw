@@ -2,14 +2,17 @@
 //!
 //! The same steps run against two drivers: a simulated darktable (the normal tests) and the real
 //! darktable application (the self-test, US-20), which decides what the `@darktable` scenarios
-//! are checked against. The feature files are built into the binary, so the self-test needs no
+//! are checked against. The `@darktable-cli` scenarios render real photos of the reference set
+//! with darktable-cli and run only in the self-test. The feature files are built into the binary, so the self-test needs no
 //! source checkout.
 
 pub mod app;
 pub mod sim;
 
+use crate::classify::{self, AuroraCheck, Class};
 use crate::edit_state::EditState;
 use crate::exif::Exposure;
+use crate::locate::locate;
 use crate::scene::{self, Scene};
 use anyhow::Result;
 use cucumber::gherkin;
@@ -59,10 +62,21 @@ pub trait Driver: Send {
 /// Which driver the next scenarios use.
 static DRIVER: Mutex<Option<Arc<Mutex<dyn Driver>>>> = Mutex::new(None);
 
+/// What the `@darktable-cli` scenarios render with: darktable-cli and the owner's photos.
+pub struct CliContext {
+    pub check: AuroraCheck,
+    pub photo_root: PathBuf,
+}
+
+static CLI: Mutex<Option<Arc<CliContext>>> = Mutex::new(None);
+
 #[derive(World)]
 #[world(init = Self::new)]
 pub struct ScenarioWorld {
     exposure: Option<Exposure>,
+    /// A real photo under test (`@darktable-cli`).
+    photo: Option<PathBuf>,
+    class: Option<Class>,
     driver: Arc<Mutex<dyn Driver>>,
 }
 
@@ -70,6 +84,8 @@ impl std::fmt::Debug for ScenarioWorld {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ScenarioWorld")
             .field("exposure", &self.exposure)
+            .field("photo", &self.photo)
+            .field("class", &self.class)
             .finish()
     }
 }
@@ -79,6 +95,8 @@ impl ScenarioWorld {
         let driver = DRIVER.lock().unwrap().clone();
         Self {
             exposure: None,
+            photo: None,
+            class: None,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -98,6 +116,8 @@ pub enum Selection {
     Simulated,
     /// The `@darktable` scenarios that can run unattended, against the given driver.
     Darktable,
+    /// The `@darktable-cli` scenarios, with the context set by [`run_cli`].
+    DarktableCli,
 }
 
 fn tagged(tags: &[String], t: &str) -> bool {
@@ -134,13 +154,24 @@ pub fn run(features: &Path, selection: Selection, driver: Option<Arc<Mutex<dyn D
                 .collect();
                 let has = |t: &str| all.iter().any(|tags| tagged(tags, t));
                 match selection {
-                    Selection::Simulated => !has("wip"),
+                    Selection::Simulated => !has("wip") && !has("darktable-cli"),
                     Selection::Darktable => has("darktable") && !has("wip") && !has("manual"),
+                    Selection::DarktableCli => {
+                        has("darktable-cli") && !has("wip") && !has("manual")
+                    }
                 }
             }),
     );
     *DRIVER.lock().unwrap() = None;
     !writer.execution_has_failed() && writer.parsing_errors() == 0
+}
+
+/// Runs the `@darktable-cli` scenarios in `features` with `ctx`. Returns whether all passed.
+pub fn run_cli(features: &Path, ctx: CliContext) -> bool {
+    *CLI.lock().unwrap() = Some(Arc::new(ctx));
+    let ok = run(features, Selection::DarktableCli, None);
+    *CLI.lock().unwrap() = None;
+    ok
 }
 
 /// Scenarios (and example rows) tagged `@manual` in the built-in features, as "feature: scenario".
@@ -235,6 +266,65 @@ fn class_is(w: &mut ScenarioWorld, class: String) {
         other => panic!("unknown class {other}"),
     };
     assert_eq!(scene::classify(w.exposure.as_ref().unwrap()), expected);
+}
+
+#[given(expr = "a photo with scene brightness {float}")]
+fn photo_with_brightness(w: &mut ScenarioWorld, ev: f64) {
+    // 1 s at ISO 100: EV100 = log2(f²)
+    w.exposure = Some(Exposure {
+        time: 1.0,
+        aperture: Some(2f64.powf(ev / 2.0)),
+        iso: 100.0,
+    });
+}
+
+/// A night photo of the reference set (data/reference-set.toml), found below the photo root.
+fn reference_night_photo(w: &mut ScenarioWorld, file: &str, year: u16) {
+    let ctx = CLI
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("needs darktable-cli (self-test only)");
+    let raw = locate(&ctx.photo_root, year, file).unwrap_or_else(|e| panic!("{e:#}"));
+    w.exposure = Some(crate::exif::read(&raw).unwrap_or_else(|e| panic!("{e:#}")));
+    w.photo = Some(raw);
+}
+
+#[given("a night photo with a green band in the sky")]
+fn night_with_aurora(w: &mut ScenarioWorld) {
+    reference_night_photo(w, "_DSC3735.ARW", 2019); // bright green aurora
+}
+
+#[given("a night photo with a dark, colourless sky")]
+fn night_without_aurora(w: &mut ScenarioWorld) {
+    reference_night_photo(w, "_DSC0906.ARW", 2018); // stars and a summit cross
+}
+
+#[when("the photos are processed")]
+fn processed(w: &mut ScenarioWorld) {
+    let exposure = w.exposure.expect("a photo");
+    let photo = w.photo.clone();
+    let class = classify::classify(&exposure, || {
+        let ctx = CLI.lock().unwrap().clone();
+        match (ctx, photo) {
+            (Some(ctx), Some(raw)) => ctx.check.render(&raw),
+            _ => anyhow::bail!("a night photo needs a real photo and darktable-cli"),
+        }
+    });
+    w.class = Some(class.unwrap_or_else(|e| panic!("processing: {e:#}")));
+}
+
+#[then("it is an aurora photo")]
+fn is_aurora(w: &mut ScenarioWorld) {
+    assert_eq!(w.class, Some(Class::Aurora));
+}
+
+#[then(expr = "the open step {string} lists the photo")]
+fn open_step_lists(w: &mut ScenarioWorld, name: String) {
+    match w.class {
+        Some(Class::Ask(q)) => assert_eq!(q.open_step(), name),
+        other => panic!("no open step for the photo: {other:?}"),
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

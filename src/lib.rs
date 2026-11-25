@@ -2,6 +2,8 @@
 //! The binary is a thin command-line front end; the executable scenarios in `features/`
 //! (ADR-0006) test this library.
 
+pub mod aurora;
+pub mod classify;
 pub mod config;
 pub mod darktable;
 pub mod edit_state;

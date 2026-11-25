@@ -131,18 +131,29 @@ fn run_renders(cfg: &Config) -> Result<bool> {
     }
 }
 
-/// Runs the executable scenarios that depend on darktable against the darktable application
-/// (US-20) and lists the ones that need a manual check. Returns whether all passed.
+/// Runs the executable scenarios that depend on darktable: the `@darktable-cli` ones with
+/// darktable-cli on photos of the reference set, then the `@darktable` ones against the darktable
+/// application (US-20); lists the ones that need a manual check. Returns whether all passed.
 pub fn scenarios(cfg: &Config) -> Result<bool> {
     let base = cfg.data_dir()?.join("selftest").join("scenarios");
+    let features = crate::scenarios::write_features(&base.join("features"))?;
+
+    println!("Running the darktable-cli scenarios …");
+    let cli_work = base.join("darktable-cli");
+    let dt = Darktable::prepare(&cfg.darktable.cli, &cfg.darktable_config_dir()?, &cli_work)?;
+    let ctx = crate::scenarios::CliContext {
+        check: crate::classify::AuroraCheck::new(dt, &cli_work.join("renders"))?,
+        photo_root: cfg.photo_root.clone(),
+    };
+    let cli_ok = crate::scenarios::run_cli(&features, ctx);
+
     println!(
-        "Starting darktable for the scenarios (private configuration and library in {}) …",
+        "\nStarting darktable for the scenarios (private configuration and library in {}) …",
         base.display()
     );
     let app = crate::scenarios::app::App::start(cfg, &base.join("darktable"))?;
-    let features = crate::scenarios::write_features(&base.join("features"))?;
     let app = std::sync::Arc::new(std::sync::Mutex::new(app));
-    let ok = crate::scenarios::run(
+    let app_ok = crate::scenarios::run(
         &features,
         crate::scenarios::Selection::Darktable,
         Some(app.clone()),
@@ -156,15 +167,23 @@ pub fn scenarios(cfg: &Config) -> Result<bool> {
         }
     }
     println!();
-    if ok {
+    if cli_ok && app_ok {
         println!("All darktable scenarios passed.");
     } else {
-        println!(
-            "Some darktable scenarios failed; darktable's log: {}",
-            base.join("darktable/darktable.log").display()
-        );
+        if !cli_ok {
+            println!(
+                "Some darktable-cli scenarios failed; their renders: {}",
+                cli_work.join("renders").display()
+            );
+        }
+        if !app_ok {
+            println!(
+                "Some darktable scenarios failed; darktable's log: {}",
+                base.join("darktable/darktable.log").display()
+            );
+        }
     }
-    Ok(ok)
+    Ok(cli_ok && app_ok)
 }
 
 /// Makes the last run's renders the new reference.
