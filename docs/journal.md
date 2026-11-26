@@ -1158,3 +1158,16 @@ measures at 1500 px (`experiments/us21_stars.py`, patch 80 % wide, 5–50 % from
   owner's stars themselves are slightly blue (B/G 0.85–1.44).
 - The black level also darkens the frame's corners (lens vignetting) almost to black on
   _DSC0909; the moonlit foreground of _DSC4743 is still too bright — the foreground is next.
+- **Owner's verdict on round 3:** T3 preferred in general, but _DSC4743's sky has a very
+  different colour impression from the owner's edit.
+- **Why (analysis, _DSC4743):** two causes. (1) One global WB can't give both: solved for
+  neutral stars the dark sky turns violet (R 0.097, G 0.063, B 0.090); solved for the owner's sky
+  colour the stars turn cyan-green (R/G 0.72). The owner's edit separates them with "color
+  correction": shadows strongly towards blue (a −6.0, b −9.1), highlights slightly the other way
+  (a +2.8, b −2.7) — split toning. (2) The exposure module's black level subtracts the same from
+  every channel; green, the weakest in the dark sky, hits zero first (T3: R 0.033, G 0.000,
+  B 0.062) → more violet; the near-black corners of _DSC0909 are the same clipping. rgb levels
+  with "preserve colors: luminance" before the tone mapper clips as well (red first). The
+  owner's sky is not darker than T0's at all (dark parts R 0.040, G 0.086, B 0.133): his punch
+  comes from brighter stars (high pass, curves lifting the highlights), and his black point
+  (levels, 0.004) sits on Lab lightness after the curves.
