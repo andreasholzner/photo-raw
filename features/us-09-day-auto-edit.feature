@@ -8,7 +8,8 @@ Feature: US-9 — Day auto-edit
   sigmoid "ACES 100-nit like" with color balance rgb "vibrant colors" when I switch to it, local
   contrast "clarity", and an exposure found per photo by rendering it. The edit contains no
   sharpening: that comes with the print export (US-5). I switch a photo with a tag and start the
-  tool on it again; the tags stay, so my choices can later teach a look rule.
+  tool on it again; the tags stay, so my choices can later teach a look rule. Without a look tag
+  the tool uses its default; a look tag is my choice and always wins.
 
   @darktable-cli
   Rule: A day photo gets the day look with its own exposure
@@ -34,10 +35,26 @@ Feature: US-9 — Day auto-edit
       Then its edit has the look "sigmoid ACES with vibrant colors" and local contrast "clarity"
       And its brightest 1 % sit at 0.885 in the edit's rendering
 
+    Scenario: Switching back to AgX
+      Given a day photo the tool has edited in sigmoid
+      When I replace its tag with "photoflow|look|agx" and start the tool on it
+      Then its edit has the look "AgX punchy" and local contrast "clarity"
+
+    Scenario: Contradictory look tags are a question
+      Given a day photo tagged "photoflow|look|agx" and "photoflow|look|sigmoid"
+      When the photos are processed
+      Then the open step "look: agx or sigmoid?" lists the photo
+      And the tool leaves its edit as it was
+
     Scenario: Switching dehaze on
       Given a day photo the tool has edited
       When I tag it "photoflow|dehaze|on" and start the tool on it
       Then its edit also has diffuse or sharpen "dehaze"
+
+    Scenario: Switching dehaze off
+      Given a day photo the tool has edited with dehaze
+      When I replace its tag with "photoflow|dehaze|off" and start the tool on it
+      Then its edit has no diffuse or sharpen "dehaze"
 
   @darktable-cli
   Rule: Where a rule is uncertain, I am asked
@@ -52,10 +69,15 @@ Feature: US-9 — Day auto-edit
       When the photos are processed
       Then the open step "snow: check look" lists the photo
 
-    Scenario: A snow scene already switched to sigmoid
+    Scenario Outline: A snow scene I have chosen a look for
       Given a day photo of a bright snow scene the tool has edited
-      When I tag it "photoflow|look|sigmoid" and start the tool on it
+      When I tag it "photoflow|look|<look>" and start the tool on it
       Then the open step "snow: check look" doesn't list the photo
+
+      Examples:
+        | look    |
+        | sigmoid |
+        | agx     |
 
   Rule: After a darktable upgrade the tool edits nothing until the self-test is accepted
 
