@@ -25,6 +25,25 @@ pub const SIGMOID_P99: f64 = 0.885;
 /// brightest 10 %, so an absolute threshold can't see snow (2026-11-26: _DSC6299 0.22, _DSC6560
 /// 0.003).
 pub const SNOW_SHARE: f64 = 0.14;
+/// The aurora check edit with highlight reconstruction off ("clip"): clipped raw highlights stay a
+/// flat plateau at the image's maximum (journal 2026-11-26).
+pub const CLIP_CHECK_XMP: &str = include_str!("../data/clip-check.xmp");
+/// Share of the frame clipped above which the exposure is to be checked: 16 of 882 day photos,
+/// all backlit scenes with blown sky next to the sun.
+pub const CLIP_SHARE: f64 = 0.003;
+
+/// Share of pixels within 0.5 % of the image's maximum, in a clip-check render.
+pub fn clipped_share(img: &Image) -> f64 {
+    let n = img.width * img.height;
+    let max = |i: usize| {
+        img.rgb[3 * i]
+            .max(img.rgb[3 * i + 1])
+            .max(img.rgb[3 * i + 2])
+    };
+    let top = (0..n).map(max).fold(f32::MIN, f32::max);
+    (0..n).filter(|&i| max(i) >= 0.995 * top).count() as f64 / n as f64
+}
+
 /// Tag prefixes of the owner's switches (ADR-0002).
 pub const LOOK_TAG: &str = "photoflow|look|";
 pub const DEHAZE_TAG: &str = "photoflow|dehaze|";
@@ -488,6 +507,20 @@ mod tests {
             .iter()
             .map(|s| (s.operation.clone(), s.multi_priority, s.multi_name.clone()))
             .collect()
+    }
+
+    #[test]
+    fn a_flat_plateau_at_the_maximum_counts_as_clipped() {
+        let mut rgb = vec![0.3f32; 100 * 100 * 3];
+        for v in rgb.iter_mut().take(3 * 100) {
+            *v = 0.9; // one row of 100: 1 % at the maximum
+        }
+        let img = Image {
+            width: 100,
+            height: 100,
+            rgb,
+        };
+        assert!((clipped_share(&img) - 0.01).abs() < 1e-9);
     }
 
     #[test]

@@ -440,7 +440,8 @@ fn day_edited_with(w: &mut ScenarioWorld, how: String) {
 
 #[given("a day photo whose brightest parts are clipped")]
 fn day_clipped(w: &mut ScenarioWorld) {
-    day_photo(w, Some(SNOW));
+    // backlit, blown sky next to the sun (1.5 % of the frame clipped)
+    day_photo(w, Some(("_DSC0831.ARW", 2018)));
 }
 
 #[given("an unedited day photo of a bright snow scene")]

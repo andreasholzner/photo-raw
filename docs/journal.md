@@ -1377,3 +1377,9 @@ flags failed on _DSC6299 (bright snow):
   and Z was good. Some foregrounds still need work. Reading: the preferred versions have a sky
   median of about 0.05–0.09; the fixed +0.4 EV pushes _DSC4743 to 0.107 and _DSC0914 to 0.129 →
   a per-photo sky-brightness target instead of a fixed exposure offset.
+- **Clipped raw highlights, measured** (US-9): a check render with highlight reconstruction off
+  (darktable's highlights module in "clip" mode, otherwise the aurora check edit, 300 px) keeps
+  clipped areas as a flat plateau at the image's maximum. Share of the frame within 0.5 % of the
+  maximum, over 882 of the 1925 day photos (the scan was stopped there): > 0.1 % on 25, > 0.3 % on
+  16, > 1 % on 3 (max 1.5 %, _DSC0831). The top six are all backlit scenes with blown sky next to
+  the sun. Threshold for the "check exposure" open step: 0.3 %.

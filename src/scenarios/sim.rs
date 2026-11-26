@@ -238,6 +238,9 @@ impl process::Tools for SimTools {
             snow: false,
         })
     }
+    fn clipped_share(&mut self, _: &process::Photo) -> Result<f64> {
+        Ok(0.0)
+    }
     fn write_edit(&mut self, p: &process::Photo, xmp: &str) -> Result<PathBuf> {
         let path = p.raw.with_extension("edit.xmp");
         self.written.insert(path.clone(), xmp.to_string());

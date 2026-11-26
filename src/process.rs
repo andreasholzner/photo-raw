@@ -69,6 +69,8 @@ pub trait Tools {
     fn sidecar_text(&mut self, p: &Photo) -> Result<String>;
     /// Solves the day edit's exposure by rendering (US-9).
     fn day_edit(&mut self, p: &Photo, sidecar: &str, wanted: Wanted) -> Result<day_edit::Solved>;
+    /// Share of the frame with clipped raw highlights (US-9).
+    fn clipped_share(&mut self, p: &Photo) -> Result<f64>;
     /// Writes an edit for darktable to apply; returns its path.
     fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf>;
     /// Why automatic edits are blocked, if they are (a darktable upgrade, US-9).
@@ -194,7 +196,7 @@ fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Optio
     let path = tools.write_edit(p, &solved.xmp)?;
     steps.insert(1, Step::Apply(path));
     steps.push(tag(edit_tag(&sidecar::parse(&solved.xmp)?)));
-    if !solved.reached {
+    if !solved.reached || tools.clipped_share(p)? > day_edit::CLIP_SHARE {
         steps.push(tag(format!("{OPEN_TAG}{CHECK_EXPOSURE}")));
     }
     if solved.snow && switches.look.is_none() {
@@ -308,6 +310,23 @@ impl Tools for RealTools<'_> {
         day_edit::solve(sidecar, wanted, |xmp| self.render_edit(&raw, xmp))
     }
 
+    fn clipped_share(&mut self, p: &Photo) -> Result<f64> {
+        let dir = self.work.join("renders");
+        std::fs::create_dir_all(&dir)?;
+        let name = p
+            .raw
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let x = dir.join("clip-check.xmp");
+        let o = dir.join(format!("{name}.clip.pfm"));
+        std::fs::write(&x, day_edit::CLIP_CHECK_XMP)?;
+        self.darktable()?
+            .render(&p.raw, &x, &o, crate::aurora::RENDER_SIZE)?;
+        Ok(day_edit::clipped_share(&crate::aurora::load_pfm(&o)?))
+    }
+
     fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf> {
         let dir = self.work.join("edits");
         std::fs::create_dir_all(&dir)?;
@@ -395,6 +414,9 @@ mod tests {
                 reached: self.reached,
                 snow: self.snow,
             })
+        }
+        fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
+            Ok(if self.reached { 0.0 } else { 0.01 })
         }
         fn write_edit(&mut self, p: &Photo, _: &str) -> Result<PathBuf> {
             Ok(p.raw.with_extension("edit.xmp"))
@@ -522,6 +544,9 @@ mod tests {
                 Ok(self.0.clone())
             }
             fn day_edit(&mut self, _: &Photo, _: &str, _: Wanted) -> Result<day_edit::Solved> {
+                panic!("re-edited")
+            }
+            fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
                 panic!("re-edited")
             }
             fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {

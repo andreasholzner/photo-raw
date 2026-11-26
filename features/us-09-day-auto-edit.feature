@@ -58,9 +58,6 @@ Feature: US-9 — Day auto-edit
   @darktable-app
   Rule: Where a rule is uncertain, I am asked
 
-    # Clipped raw highlights can't be measured yet: darktable's highlight reconstruction fills
-    # them in every render (journal 2026-11-26).
-    @wip
     Scenario: The exposure target can't be reached
       Given a day photo whose brightest parts are clipped
       When the photos are processed
