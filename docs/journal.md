@@ -1514,5 +1514,26 @@ first row that leaves a sky model (brightness and texture of the top 30 %). Shee
   the Milky Way leave the sky model. Clear-sky photos with a bright ground (_DSC0905) work.
 - The hand lines mark where the edits' gradients should start, which is not always the land/sky
   edge (on _DSC8287 the treetops, not the snow edge) — a reference for a detector needs the true
-  skyline.
+  skyline. _DSC0909 has no horizon at all: the gradient in the owner's edit suppresses light
+  pollution (owner).
 - Hand-tuned rules on brightness won't reach a usable rate; next is a sky segmentation model.
+
+### 2026-11-26 — US-23: round 2, sky segmentation model
+
+SkyWater-Seg (SegFormer MiT-B2 fine-tuned on ADE20K for sky/water/person; MIT licence; 95 MB ONNX,
+384×384 input) on the 130 night and aurora renders of US-7 (300×200), run from Rust with tract
+(pure Rust, about 1 s per photo on the CPU; the model's stored intermediate shapes had to be
+removed for tract). Input: the linear render brightened to its 99.5th percentile, sRGB. Skyline per
+column: scanning up from the bottom, the first rows that are sky. Sheets in `photo-edits/_us23/`.
+
+- The skyline follows peaks, ridges, treelines, tents and crosses closely — the shape a straight
+  line can't give (DSC00461, the Rosengarten towers). Hand lines agree within 0.05 of the frame
+  height on 10 of 14 photos; where they don't, the hand line is the gradient start, not the
+  skyline. _DSC0909 comes out with no land in any column, which is right.
+- Bright aurora is often not called sky (it looks like cloud to the model). Scanning from the bottom
+  makes that harmless where the aurora doesn't reach the land; where it does (about 5 of 130,
+  mostly 2019 Nordnorwegen), the skyline follows the aurora's edge.
+- A greyscale input fixes the Milky Way frames the colour input calls non-sky, but loses much more
+  aurora; taking a pixel as sky when any of colour, greyscale or a darker mapping (99.99th
+  percentile) says so keeps the good of each. Left: the aurora-to-the-ground cases and one Milky Way
+  frame with a partly non-sky mask.
