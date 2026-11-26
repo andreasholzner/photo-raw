@@ -1337,3 +1337,38 @@ variants look yellow-orange where the owner's are white (the core-average colour
 neutral, so it misses this), and _DSC0926's foreground is over-saturated (mat, grass): the star
 chroma boost and the colour balance act on the whole frame.
 - **Owner's decision:** +0.4 EV and no star chroma boost, on all six photos (round 10).
+
+### 2026-11-26 — US-21, round 10: +0.4 EV, no star chroma boost (all six)
+
+Round 6's Z + the star curve after AgX (round 8's strength, 3.0) + 0.4 EV, no star chroma boost,
+sky tints re-solved. Sheets `photo-edits/_us21/round10/sheet_<photo>.png` (columns: owner's edit,
+Z, F).
+
+| photo | star peak A / Z / F | sky median A / Z / F | stars R/G, B/G A / F |
+|---|---|---|---|
+| DSC00461 | 0.79 / 0.36 / 0.56 | 0.101 / 0.046 / 0.078 | 0.91, 0.85 / 1.04, 0.76 |
+| _DSC0905 | 0.76 / 0.44 / 0.58 | 0.108 / 0.055 / 0.086 | 0.96, 1.08 / 0.97, 1.09 |
+| _DSC0909 | 1.00 / 0.49 / 0.62 | 0.104 / 0.061 / 0.092 | 0.93, 1.30 / 0.88, 1.25 |
+| _DSC0914 | 0.79 / 0.54 / 0.69 | 0.135 / 0.080 / 0.129 | 0.97, 1.11 / 0.90, 1.21 |
+| _DSC0926 | 0.54 / 0.40 / 0.51 | 0.073 / 0.029 / 0.044 | 1.02, 0.93 / 1.02, 0.91 |
+| _DSC4743 | 0.63 / 0.52 / 0.78 | 0.100 / 0.057 / 0.107 | 0.93, 1.44 / 0.96, 1.30 |
+
+- Stars brighter than in Z on all six and whiter (without the chroma boost they no longer turn
+  orange); the sky stays darker than the owner's except on _DSC0914 and _DSC4743, where it reaches
+  the owner's level.
+- _DSC4743, which the owner liked in Z: F is clearly brighter, with a prominent purple Milky Way
+  and over-bright, cold rocks in the foreground.
+
+### 2026-11-26 — US-9: the flags on real photos
+
+First run of US-9's scenarios against the self-test's darktable: 22 of 24 passed (default look
+with the exposure on target, import kept, both switches both ways, contradictory tags). The two
+flags failed on _DSC6299 (bright snow):
+- **Snow**: "> 14 % of pixels brighter than 0.7 and colourless" can't be true in AgX — the exposure
+  rule puts the brightest 10 % at 0.675. Relative to the image instead (colourless, brighter than
+  60 % of the 90th percentile): _DSC6299 0.22, _DSC6560 0.003.
+- **Clipped highlights**: AgX reaches its target on every photo (soft roll-off), so "target
+  unreachable" never fires. Measuring clipped raw highlights instead didn't work: no plateau at
+  the maximum, even at full size in a linear render — darktable's highlight reconstruction fills
+  clipped areas in every render. _DSC6299 probably isn't clipped in the raw at all (its note in
+  the reference set refers to the owner's edit).
