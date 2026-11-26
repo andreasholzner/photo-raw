@@ -92,7 +92,10 @@ function commands.apply_style(name, path)
 end
 
 -- The darkroom opens the image darktable acts on: it has to be in the lighttable's collection.
--- Acting before darktable has loaded the image crashed it in the spike, so wait for the event.
+-- With the mouse pointer inside darktable's window that is the image darktable last had "under
+-- the mouse" — after leaving the darkroom, the previous photo — not the selected one; switching
+-- the darkroom to the right image afterwards didn't make the following changes land on it.
+-- Acting before darktable has loaded the image crashed it in the spike: wait for the event.
 function commands.darkroom(path)
   local img = image(path)
   lighttable()
@@ -105,6 +108,10 @@ function commands.darkroom(path)
   dt.gui.current_view(dt.gui.views.darkroom)
   for _ = 1, 240 do
     if loaded == path then dt.control.sleep(3000); return "" end
+    if loaded then
+      error("darktable opened " .. loaded .. " instead of " .. path ..
+        " — keep the mouse pointer outside darktable's window during the self-test")
+    end
     dt.control.sleep(500)
   end
   error("darkroom didn't load " .. path .. " within 120 s (view: " .. dt.gui.current_view().id .. ")")

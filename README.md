@@ -48,11 +48,12 @@ you can open side by side. darktable-cli runs with a private copy of your darkta
 configuration and an in-memory library.
 
 The `@darktable-cli` scenarios first render two photos of the reference set small, with
-darktable-cli (a few seconds). For the other scenarios, **a darktable window opens and works by itself for a few minutes — don't
-touch it**; it closes when done. Your own darktable can stay open meanwhile. It runs with a private copy of your configuration, its own
-library and copies of one raw of the reference set. Scenarios that can't run unattended are
-listed at the end as manual checks. Your library, configuration and photos are not touched
-by either part.
+darktable-cli (a few seconds). For the other scenarios, **a darktable window opens and works by
+itself for a few minutes — don't touch it, and keep the mouse pointer outside it** (darktable
+acts on the photo under the pointer); it closes when done. Your own darktable can stay open
+meanwhile. It runs with a private copy of your configuration, its own library and copies of one
+raw of the reference set. Scenarios that can't run unattended are listed at the end as manual
+checks. Your library, configuration and photos are not touched by either part.
 
 ## darktable setup
 

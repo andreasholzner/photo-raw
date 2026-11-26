@@ -151,6 +151,9 @@ pub fn scenarios(cfg: &Config) -> Result<bool> {
         "\nStarting darktable for the scenarios (private configuration and library in {}) …",
         base.display()
     );
+    println!(
+        "Keep the mouse pointer outside darktable's window until it closes: darktable would act on the photo under the pointer."
+    );
     let app = crate::scenarios::app::App::start(cfg, &base.join("darktable"))?;
     let app = std::sync::Arc::new(std::sync::Mutex::new(app));
     let app_ok = crate::scenarios::run(
