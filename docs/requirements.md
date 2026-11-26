@@ -40,7 +40,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
-| 5    | US-7 – US-10                | The tool's core: classify, safety, day and aurora edits                        |
+| 5    | US-8 – US-10, US-21         | The tool's core: safety, day, aurora and night edits                           |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
 
@@ -58,7 +58,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-4](#us-4--haze-and-clarity)                                 | ✅     | Haze and clarity                               | [Foundation](#foundation)                       |
 | [US-5](#us-5--print-sharpening-in-the-export)                   | ✅     | Print sharpening in the export                 | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)                   | ✅     | More analysis on edited photos                 | [Foundation](#foundation)                       |
-| [US-7](#us-7--classify-day-night-and-aurora)                    | 🚧     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
+| [US-7](#us-7--classify-day-night-and-aurora)                    | ✅     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)                  | 🚧     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
 | [US-9](#us-9--day-auto-edit)                                    | 📋     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
 | [US-10](#us-10--aurora-auto-edit)                               | 📋     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
@@ -72,6 +72,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-18](#us-18--aurora-base-pipeline)                           | ✅     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
+| [US-21](#us-21--night-auto-edit)                                | 📋     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -196,13 +197,10 @@ unattended, also under a virtual display (journal 2026-11-24, `spikes/us-20-dark
 
 ### US-7 — Classify day, night and aurora
 
-**In progress 🚧** — As the owner, I want photos sorted into day, night and aurora automatically, and
+**Done ✅** — As the owner, I want photos sorted into day, night and aurora automatically, and
 to be asked only where it is unclear.
 
 **Acceptance criteria:** [us-07-classify-day-night-and-aurora.feature](../features/us-07-classify-day-night-and-aurora.feature)
-
-**Notes:** Open: whether night photos without aurora get a generic night edit instead of becoming a
-question.
 
 ### US-8 — Only touch what was handed over
 
@@ -269,6 +267,18 @@ upgrade, so that only photos I really edited by hand are protected.
 older version, and writes the converted settings back; the edit then no longer matches the
 fingerprint the tool tagged it with (US-8, journal 2026-11-24). A photo whose state can't be told
 for sure still counts as edited by hand (ADR-0003).
+
+### US-21 — Night auto-edit
+
+**Planned 📋** — As the owner, I want night photos without aurora — stars, the Milky Way, moonlit
+mountains, city lights below — edited automatically close to my favourite night edits, so I only
+correct outliers.
+
+**Notes:** The look to aim for is the owner's edits of DSC00461 (2018), _DSC0905, _DSC0909,
+_DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The pipeline
+follows today's best practice for night photography and is compared side by side with those
+edits, like the day and aurora bases (US-3, US-18). A daytime long exposure with an ND filter
+counts as night by its exposure (US-7); the owner edits those rare photos by hand.
 
 ## Panoramas
 

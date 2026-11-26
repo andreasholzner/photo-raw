@@ -319,6 +319,11 @@ fn is_aurora(w: &mut ScenarioWorld) {
     assert_eq!(w.class, Some(Class::Aurora));
 }
 
+#[then("it is a night photo without aurora")]
+fn is_night_without_aurora(w: &mut ScenarioWorld) {
+    assert_eq!(w.class, Some(Class::Night));
+}
+
 #[then(expr = "the open step {string} lists the photo")]
 fn open_step_lists(w: &mut ScenarioWorld, name: String) {
     match w.class {

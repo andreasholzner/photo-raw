@@ -11,7 +11,6 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Question {
     DayOrNight,
-    NightWithoutAurora,
 }
 
 impl Question {
@@ -19,7 +18,6 @@ impl Question {
     pub fn open_step(self) -> &'static str {
         match self {
             Question::DayOrNight => "day or night?",
-            Question::NightWithoutAurora => "night photo without aurora",
         }
     }
 }
@@ -27,6 +25,8 @@ impl Question {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Class {
     Day,
+    /// A night photo without aurora (stars, moonlight, city lights).
+    Night,
     Aurora,
     Ask(Question),
 }
@@ -41,7 +41,7 @@ pub fn classify(
         Scene::Day => Class::Day,
         Scene::Unclear => Class::Ask(Question::DayOrNight),
         Scene::Night if aurora::has_aurora(&check_render()?) => Class::Aurora,
-        Scene::Night => Class::Ask(Question::NightWithoutAurora),
+        Scene::Night => Class::Night,
     })
 }
 
@@ -101,9 +101,6 @@ mod tests {
             classify(&exp(5.0), never).unwrap(),
             Class::Ask(Question::DayOrNight)
         );
-        assert_eq!(
-            classify(&exp(-2.0), flat).unwrap(),
-            Class::Ask(Question::NightWithoutAurora)
-        );
+        assert_eq!(classify(&exp(-2.0), flat).unwrap(), Class::Night);
     }
 }

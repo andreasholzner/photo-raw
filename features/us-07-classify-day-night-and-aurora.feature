@@ -29,16 +29,17 @@ Feature: US-7 — Classify day, night and aurora
   @darktable-cli
   Rule: Night photos are checked for aurora
     Aurora shows as colour structure in the sky — bands and curtains — while light pollution,
-    twilight and moonlight change the sky's colour smoothly. A weak or diffuse aurora becomes a
-    question, like a night photo without aurora: making it "pop" would mostly show noise.
+    twilight and moonlight change the sky's colour smoothly. A weak or diffuse aurora counts as a
+    night photo without aurora: making it "pop" would mostly show noise. Night photos without
+    aurora get their own edit (US-21).
 
     Scenario: Colour in the night sky means aurora
       Given a night photo with a green band in the sky
       When the photos are processed
       Then it is an aurora photo
 
-    Scenario: A night photo without aurora becomes a question
+    Scenario: A dark, colourless night sky is a night photo without aurora
       Given a night photo with a dark, colourless sky
       When the photos are processed
-      Then the open step "night photo without aurora" lists the photo
+      Then it is a night photo without aurora
 
