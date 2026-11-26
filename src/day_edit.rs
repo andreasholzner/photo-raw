@@ -20,7 +20,10 @@ pub const RENDER_SIZE: u32 = 500;
 pub const AGX_P90: f64 = 0.675;
 /// sigmoid: the brightest 1 % at this luminance (US-6).
 pub const SIGMOID_P99: f64 = 0.885;
-/// Share of bright, colourless pixels above which a photo counts as a snow scene.
+/// Share of bright, colourless pixels above which a photo counts as a snow scene. "Bright" is
+/// relative to the image (above 60 % of its 90th percentile): the exposure rule fixes the
+/// brightest 10 %, so an absolute threshold can't see snow (2026-11-26: _DSC6299 0.22, _DSC6560
+/// 0.003).
 pub const SNOW_SHARE: f64 = 0.14;
 /// Tag prefixes of the owner's switches (ADR-0002).
 pub const LOOK_TAG: &str = "photoflow|look|";
@@ -382,22 +385,27 @@ pub struct Stats {
 pub fn stats(img: &Image, percentile: f64) -> Stats {
     let n = img.width * img.height;
     let mut lum = Vec::with_capacity(n);
-    let mut snow = 0usize;
+    let mut chroma = Vec::with_capacity(n);
     for i in 0..n {
         let (r, g, b) = (
             f64::from(img.rgb[3 * i]),
             f64::from(img.rgb[3 * i + 1]),
             f64::from(img.rgb[3 * i + 2]),
         );
-        let l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-        if l > 0.7 && r.max(g).max(b) - r.min(g).min(b) < 0.1 {
-            snow += 1;
-        }
-        lum.push(l);
+        lum.push(0.2126 * r + 0.7152 * g + 0.0722 * b);
+        chroma.push(r.max(g).max(b) - r.min(g).min(b));
     }
-    lum.sort_by(f64::total_cmp);
+    let mut sorted = lum.clone();
+    sorted.sort_by(f64::total_cmp);
+    let at = |q: f64| sorted[((q * n as f64) as usize).min(n - 1)];
+    let bright = 0.6 * at(0.90);
+    let snow = lum
+        .iter()
+        .zip(&chroma)
+        .filter(|(l, c)| **l > bright && **c < 0.06)
+        .count();
     Stats {
-        percentile: lum[((percentile * n as f64) as usize).min(n - 1)],
+        percentile: at(percentile),
         snow: snow as f64 / n as f64,
     }
 }
