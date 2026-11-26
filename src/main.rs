@@ -39,7 +39,11 @@ enum Selftest {
     /// Render the reference set and compare it with the reference, then run the darktable scenarios
     Run,
     /// Run only the scenarios that check darktable's behaviour (starts darktable for a few minutes)
-    Scenarios,
+    Scenarios {
+        /// Only scenarios whose name, rule, feature or feature file contains this text
+        #[arg(long)]
+        only: Option<String>,
+    },
     /// Make the renders of the last run the new reference
     Accept,
 }
@@ -49,7 +53,9 @@ fn main() -> ExitCode {
     let result = config::Config::load(cli.config.as_deref()).and_then(|cfg| match cli.command {
         Command::Selftest(Selftest::Init { force }) => selftest::init(&cfg, force),
         Command::Selftest(Selftest::Run) => selftest::run(&cfg),
-        Command::Selftest(Selftest::Scenarios) => selftest::scenarios(&cfg),
+        Command::Selftest(Selftest::Scenarios { only }) => {
+            selftest::scenarios(&cfg, only.as_deref())
+        }
         Command::Selftest(Selftest::Accept) => selftest::accept(&cfg),
         Command::Process { handover, plan } => run_process(&cfg, &handover, &plan),
     });

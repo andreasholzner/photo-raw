@@ -69,7 +69,7 @@ pub fn init(cfg: &Config, force: bool) -> Result<bool> {
 pub fn run(cfg: &Config) -> Result<bool> {
     let renders_ok = run_renders(cfg)?;
     println!();
-    let scenarios_ok = scenarios(cfg)?;
+    let scenarios_ok = scenarios(cfg, None)?;
     Ok(renders_ok && scenarios_ok)
 }
 
@@ -149,31 +149,55 @@ fn run_renders(cfg: &Config) -> Result<bool> {
 /// Runs the executable scenarios that depend on darktable: the `@darktable-cli` ones with
 /// darktable-cli on photos of the reference set, then the `@darktable` ones against the darktable
 /// application (US-20); lists the ones that need a manual check. Returns whether all passed.
-pub fn scenarios(cfg: &Config) -> Result<bool> {
+pub fn scenarios(cfg: &Config, only: Option<&str>) -> Result<bool> {
+    use crate::scenarios::{Selection, count};
     let base = cfg.data_dir()?.join("selftest").join("scenarios");
     let features = crate::scenarios::write_features(&base.join("features"))?;
+    let (n_cli, n_app) = (
+        count(Selection::DarktableCli, only),
+        count(Selection::Darktable, only),
+    );
+    if only.is_some() {
+        println!(
+            "--only {:?}: {n_cli} darktable-cli and {n_app} darktable scenarios",
+            only.unwrap()
+        );
+        if n_cli + n_app == 0 {
+            bail!("no scenario matches {:?}", only.unwrap());
+        }
+    }
 
-    println!("Running the darktable-cli scenarios …");
     let cli_work = base.join("darktable-cli");
-    let dt = Darktable::prepare(&cfg.darktable.cli, &cfg.darktable_config_dir()?, &cli_work)?;
-    let ctx = crate::scenarios::CliContext {
-        check: crate::classify::AuroraCheck::new(dt, &cli_work.join("renders"))?,
-        photo_root: cfg.photo_root.clone(),
+    let cli_ok = if n_cli > 0 {
+        println!("Running the darktable-cli scenarios …");
+        let dt = Darktable::prepare(&cfg.darktable.cli, &cfg.darktable_config_dir()?, &cli_work)?;
+        let ctx = crate::scenarios::CliContext {
+            check: crate::classify::AuroraCheck::new(dt, &cli_work.join("renders"))?,
+            photo_root: cfg.photo_root.clone(),
+        };
+        crate::scenarios::run_cli(&features, only, ctx)
+    } else {
+        true
     };
-    let cli_ok = crate::scenarios::run_cli(&features, ctx);
 
-    println!(
-        "\nStarting darktable on a virtual screen for the scenarios (private configuration and library in {}) …",
-        base.display()
-    );
-    let app = crate::scenarios::app::App::start(cfg, &base.join("darktable"))?;
-    let app = std::sync::Arc::new(std::sync::Mutex::new(app));
-    let app_ok = crate::scenarios::run(
-        &features,
-        crate::scenarios::Selection::Darktable,
-        Some(app.clone()),
-    );
-    app.lock().unwrap_or_else(|e| e.into_inner()).stop();
+    let app_ok = if n_app > 0 {
+        println!(
+            "\nStarting darktable on a virtual screen for the scenarios (private configuration and library in {}) …",
+            base.display()
+        );
+        let app = crate::scenarios::app::App::start(cfg, &base.join("darktable"))?;
+        let app = std::sync::Arc::new(std::sync::Mutex::new(app));
+        let ok = crate::scenarios::run(
+            &features,
+            crate::scenarios::Selection::Darktable,
+            only,
+            Some(app.clone()),
+        );
+        app.lock().unwrap_or_else(|e| e.into_inner()).stop();
+        ok
+    } else {
+        true
+    };
     let manual = crate::scenarios::manual_checks();
     if !manual.is_empty() {
         println!("\nManual checks (can't be run unattended; do them after a darktable upgrade):");

@@ -183,8 +183,79 @@ pub fn write_features(dir: &Path) -> Result<PathBuf> {
 
 /// Runs the scenarios in `features`; with `driver` they run against it, otherwise each scenario
 /// gets a fresh simulated darktable. Returns whether all passed.
-pub fn run(features: &Path, selection: Selection, driver: Option<Arc<Mutex<dyn Driver>>>) -> bool {
+/// Whether a scenario belongs to `selection` and, with `only`, mentions it (case-insensitive) in
+/// its feature file's name, feature, rule or scenario name.
+fn wanted(
+    selection: Selection,
+    only: Option<&str>,
+    file: &str,
+    feature: &gherkin::Feature,
+    rule: Option<&gherkin::Rule>,
+    scenario: &gherkin::Scenario,
+) -> bool {
+    let all: Vec<&[String]> = [
+        Some(&feature.tags[..]),
+        rule.map(|r| &r.tags[..]),
+        Some(&scenario.tags[..]),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let has = |t: &str| all.iter().any(|tags| tagged(tags, t));
+    let in_selection = match selection {
+        Selection::Simulated => !has("wip") && !has("darktable-cli") && !has("darktable-app"),
+        Selection::Darktable => {
+            (has("darktable") || has("darktable-app")) && !has("wip") && !has("manual")
+        }
+        Selection::DarktableCli => has("darktable-cli") && !has("wip") && !has("manual"),
+    };
+    let matches = only.is_none_or(|o| {
+        let o = o.to_lowercase();
+        [
+            file,
+            &feature.name,
+            rule.map_or("", |r| &r.name),
+            &scenario.name,
+        ]
+        .iter()
+        .any(|t| t.to_lowercase().contains(&o))
+    });
+    in_selection && matches
+}
+
+/// How many built-in scenarios `selection` and `only` pick.
+pub fn count(selection: Selection, only: Option<&str>) -> usize {
+    let mut n = 0;
+    for (name, text) in FEATURES {
+        let Ok(f) = gherkin::Feature::parse(text, gherkin::GherkinEnv::default()) else {
+            continue;
+        };
+        n += f
+            .scenarios
+            .iter()
+            .filter(|s| wanted(selection, only, name, &f, None, s))
+            .count();
+        for r in &f.rules {
+            n += r
+                .scenarios
+                .iter()
+                .filter(|s| wanted(selection, only, name, &f, Some(r), s))
+                .count();
+        }
+    }
+    n
+}
+
+/// Runs the scenarios in `features` that `selection` and `only` pick; with `driver` they run
+/// against it, otherwise each scenario gets a fresh simulated darktable. Returns whether all passed.
+pub fn run(
+    features: &Path,
+    selection: Selection,
+    only: Option<&str>,
+    driver: Option<Arc<Mutex<dyn Driver>>>,
+) -> bool {
     *DRIVER.lock().unwrap() = driver;
+    let only = only.map(str::to_string);
     let writer = futures::executor::block_on(
         ScenarioWorld::cucumber()
             // not the program's own command line (photoflow's arguments aren't cucumber's)
@@ -192,26 +263,13 @@ pub fn run(features: &Path, selection: Selection, driver: Option<Arc<Mutex<dyn D
             .max_concurrent_scenarios(1)
             .fail_on_skipped()
             .filter_run(features, move |feature, rule, scenario| {
-                let all: Vec<&[String]> = [
-                    Some(&feature.tags[..]),
-                    rule.map(|r| &r.tags[..]),
-                    Some(&scenario.tags[..]),
-                ]
-                .into_iter()
-                .flatten()
-                .collect();
-                let has = |t: &str| all.iter().any(|tags| tagged(tags, t));
-                match selection {
-                    Selection::Simulated => {
-                        !has("wip") && !has("darktable-cli") && !has("darktable-app")
-                    }
-                    Selection::Darktable => {
-                        (has("darktable") || has("darktable-app")) && !has("wip") && !has("manual")
-                    }
-                    Selection::DarktableCli => {
-                        has("darktable-cli") && !has("wip") && !has("manual")
-                    }
-                }
+                let file = feature
+                    .path
+                    .as_ref()
+                    .and_then(|p| p.file_name())
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                wanted(selection, only.as_deref(), &file, feature, rule, scenario)
             }),
     );
     *DRIVER.lock().unwrap() = None;
@@ -219,9 +277,9 @@ pub fn run(features: &Path, selection: Selection, driver: Option<Arc<Mutex<dyn D
 }
 
 /// Runs the `@darktable-cli` scenarios in `features` with `ctx`. Returns whether all passed.
-pub fn run_cli(features: &Path, ctx: CliContext) -> bool {
+pub fn run_cli(features: &Path, only: Option<&str>, ctx: CliContext) -> bool {
     *CLI.lock().unwrap() = Some(Arc::new(ctx));
-    let ok = run(features, Selection::DarktableCli, None);
+    let ok = run(features, Selection::DarktableCli, only, None);
     *CLI.lock().unwrap() = None;
     ok
 }
@@ -760,4 +818,22 @@ fn leaves_alone(w: &mut ScenarioWorld, report: String) {
     let s = w.with("ask the tool", |d| d.edit_state());
     assert!(!s.may_edit(), "the tool would edit it: {s:?}");
     assert_eq!(s.report(), Some(report.as_str()));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_narrows_the_selection() {
+        assert_eq!(count(Selection::DarktableCli, Some("aurora")), 2);
+        assert_eq!(count(Selection::Darktable, Some("aurora")), 0);
+        assert_eq!(count(Selection::Darktable, Some("SECOND RUN")), 1);
+        assert!(count(Selection::Darktable, Some("us-09")) > 5);
+        assert_eq!(
+            count(Selection::Darktable, Some("no scenario is called this")),
+            0
+        );
+        assert!(count(Selection::Darktable, None) >= count(Selection::Darktable, Some("us-08")));
+    }
 }

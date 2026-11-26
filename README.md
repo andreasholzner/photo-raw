@@ -41,6 +41,7 @@ things:
 photoflow selftest init       # once: render the set and store it as the reference
 photoflow selftest run        # render and compare, then run the darktable scenarios
 photoflow selftest scenarios  # only the darktable scenarios (about 10 minutes)
+photoflow selftest scenarios --only snow  # only scenarios whose name, rule, feature or file contains "snow"
 photoflow selftest accept     # make the last renders the new reference (intended changes)
 ```
 
