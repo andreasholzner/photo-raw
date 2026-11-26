@@ -1106,3 +1106,30 @@ US-18 (×1000; in star fields the stars count too, so it reads high):
 - Matching only the sky goes wrong on the foreground: on _DSC4743 the moonlit rocks come out far
   too bright and cyan (the owner's edit keeps them dark); _DSC0914's sky turns greenish in the
   sigmoid columns. The foreground needs its own treatment, as for aurora (US-18).
+- **Owner's verdict on round 1:** N3 (AgX) slightly preferred. In all candidates the stars lose a
+  lot of their punch compared to the owner's edits, and they look too blue/green; a bit redder
+  would be better.
+
+### 2026-11-26 — US-21, round 2: what takes the stars' punch
+
+On N3 (AgX): R0 = N3; R1 + raw chromatic aberrations (star fringes); R2 = R1 with luma denoise
+0.35 instead of 0.7; R3 = R2 with a warmer WB (sky-background target R/G ×1.06, B/G ×0.9). Sheets
+`photo-edits/_us21/round2/sheet_<photo>.png`. New measure for the stars (journal-only tool,
+`experiments/us21_stars.py`): the 300 brightest local maxima in a sky patch; **punch** = peak
+luminance / median of the 15×15 px around it; star colour = R/G, B/G of the 3×3 core.
+
+| photo | punch A | R0 | R1 | R2 | R3 | star R/G, B/G A | R0 |
+|---|---|---|---|---|---|---|---|
+| DSC00461 | 7.9 | 3.2 | 3.2 | 3.2 | 3.2 | 0.89, 0.86 | 0.98, 0.70 |
+| _DSC0905 | 7.3 | 4.9 | 4.8 | 4.7 | 4.7 | 0.96, 1.06 | 1.05, 0.86 |
+| _DSC0909 | 9.5 | 5.0 | 5.0 | 4.8 | 4.8 | 0.93, 1.21 | 0.99, 1.05 |
+| _DSC0914 | 6.6 | 4.2 | 4.2 | 4.1 | 4.1 | 0.97, 1.06 | 0.96, 1.06 |
+| _DSC0926 | 8.8 | 6.5 | 6.5 | 6.4 | 6.4 | 1.01, 0.96 | 1.07, 0.63 |
+| _DSC4743 | 3.6 | 3.5 | 3.5 | 3.5 | 3.4 | 0.95, 1.47 | 0.80, 1.04 |
+
+- Neither CA correction nor weaker denoise changes the punch. The 100 % crops show why: the
+  owner's edits have an almost black sky between the stars, so faint stars vanish and the bright
+  ones stand out; the candidates lift the sky and the faint stars (grey, busy). A black-point /
+  shadow-contrast difference, not detail.
+- The WB solved on the sky background leaves the stars greenish (high G; _DSC4743 R/G 0.80).
+  CA correction and the warmer WB move the stars only a little.
