@@ -207,6 +207,45 @@ pub struct Sim {
     photo: Photo,
     library: Vec<(PathBuf, Photo)>,
     folders: usize,
+    /// Edits the tool handed over (as XMP text), by photo: they replace the photo's sidecar.
+    edits: std::collections::HashMap<PathBuf, String>,
+}
+
+/// The tools of a simulated run: every photo is a day photo, renders aren't simulated (the
+/// exposure is left at 0 EV and counts as reached).
+struct SimTools {
+    sidecars: std::collections::HashMap<PathBuf, String>,
+    written: std::collections::HashMap<PathBuf, String>,
+}
+
+impl process::Tools for SimTools {
+    fn classify(&mut self, _: &process::Photo) -> Result<Class> {
+        Ok(Class::Day)
+    }
+    fn sidecar_text(&mut self, p: &process::Photo) -> Result<String> {
+        self.sidecars.get(&p.raw).cloned().context("no sidecar")
+    }
+    fn day_edit(
+        &mut self,
+        _: &process::Photo,
+        sidecar: &str,
+        wanted: crate::day_edit::Wanted,
+    ) -> Result<crate::day_edit::Solved> {
+        Ok(crate::day_edit::Solved {
+            xmp: crate::day_edit::build(sidecar, wanted, 0.0)?,
+            ev: 0.0,
+            reached: true,
+            snow: false,
+        })
+    }
+    fn write_edit(&mut self, p: &process::Photo, xmp: &str) -> Result<PathBuf> {
+        let path = p.raw.with_extension("edit.xmp");
+        self.written.insert(path.clone(), xmp.to_string());
+        Ok(path)
+    }
+    fn edits_blocked(&mut self) -> Result<Option<String>> {
+        Ok(None)
+    }
 }
 
 impl Sim {
@@ -238,19 +277,31 @@ impl Sim {
                 })
                 .collect(),
         };
-        for (raw, steps) in process::plan(&handover, |_| Ok(Class::Day)) {
-            let tags = &mut self
-                .library
-                .iter_mut()
-                .find(|(r, _)| *r == raw)
-                .unwrap()
-                .1
-                .library
-                .tags;
+        let mut tools = SimTools {
+            sidecars: photos
+                .iter()
+                .map(|raw| {
+                    let p = &self.library.iter().find(|(r, _)| r == raw).unwrap().1;
+                    let text = self.edits.get(raw).cloned().unwrap_or_else(|| {
+                        p.sidecar.as_ref().map(Sidecar::xmp).unwrap_or_default()
+                    });
+                    (raw.clone(), text)
+                })
+                .collect(),
+            written: Default::default(),
+        };
+        for (raw, steps) in process::plan(&handover, &mut tools) {
+            let photo = &mut self.library.iter_mut().find(|(r, _)| *r == raw).unwrap().1;
             for s in steps {
+                let tags = &mut photo.library.tags;
                 match s {
                     Step::Clear => {
                         tags.retain(|t| !process::CLEARED_PREFIXES.iter().any(|p| t.starts_with(p)))
+                    }
+                    Step::Apply(path) => {
+                        tags.retain(|t| !t.starts_with(crate::edit_state::EDIT_TAG_PREFIX));
+                        photo.library.is_altered = true;
+                        self.edits.insert(raw.clone(), tools.written[&path].clone());
                     }
                     Step::Tag(t) => tags.push(t),
                 }

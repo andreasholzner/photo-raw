@@ -45,7 +45,7 @@ pub fn read(path: &Path) -> Result<History> {
 }
 
 /// Decodes a darktable parameter blob: hex, or `gzNN` + base64 of zlib data.
-fn decode(s: &str) -> Result<Vec<u8>> {
+pub fn decode(s: &str) -> Result<Vec<u8>> {
     if let Some(rest) = s.strip_prefix("gz") {
         let b64 = rest.get(2..).context("short gz blob")?;
         let z = base64::engine::general_purpose::STANDARD.decode(b64)?;
@@ -60,6 +60,23 @@ fn decode(s: &str) -> Result<Vec<u8>> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16).context("bad hex blob"))
         .collect()
+}
+
+/// Encodes a parameter blob as darktable does: hex up to 100 bytes, else `gzNN` (the compression
+/// factor) + base64 of zlib data.
+pub fn encode(bytes: &[u8]) -> String {
+    if bytes.len() <= 100 {
+        return bytes.iter().map(|b| format!("{b:02x}")).collect();
+    }
+    use std::io::Write;
+    let mut z = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+    z.write_all(bytes).expect("in-memory write");
+    let z = z.finish().expect("in-memory write");
+    let factor = (bytes.len() / z.len()).clamp(1, 99);
+    format!(
+        "gz{factor:02}{}",
+        base64::engine::general_purpose::STANDARD.encode(z)
+    )
 }
 
 /// Reads a sidecar from its text.
@@ -205,6 +222,14 @@ mod tests {
             "gz04{}",
             base64::engine::general_purpose::STANDARD.encode(z)
         )
+    }
+
+    #[test]
+    fn encode_round_trips() {
+        for len in [4usize, 100, 101, 500] {
+            let b: Vec<u8> = (0..len).map(|i| (i % 7) as u8).collect();
+            assert_eq!(decode(&encode(&b)).unwrap(), b);
+        }
     }
 
     #[test]

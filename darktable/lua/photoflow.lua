@@ -8,8 +8,9 @@
 
   For each run the script makes darktable rewrite the photos' sidecars, writes a hand-over file
   (what darktable knows about each photo), runs `photoflow process` in the background and applies
-  the plan it writes: tags only, so darktable stays the only writer of its library and of the
-  sidecars (ADR-0001, ADR-0002). File formats: see the photoflow source, src/process.rs.
+  the plan it writes, so darktable stays the only writer of its library and of the
+  sidecars (ADR-0001, ADR-0002): darktable applies the tool's edits (`apply_sidecar`) and attaches its
+  tags. File formats: see the photoflow source, src/process.rs.
 ]]
 
 local dt = require "darktable"
@@ -17,6 +18,7 @@ local dt = require "darktable"
 local MODULE = "photoflow"
 local TOUCH_TAG = "photoflow|touch"
 local CLEARED = { "photoflow|class|", "photoflow|open|", "photoflow|left alone|" }
+local EDIT = "photoflow|edit|"
 
 dt.preferences.register(MODULE, "binary", "string", "photoflow: program",
   "path of the photoflow program", "photoflow")
@@ -82,6 +84,12 @@ local function apply_plan(text, by_path)
           if has_prefix(t.name, p) then img:detach_tag(t); break end
         end
       end
+    elseif img and action == "apply" then
+      -- the tool's new edit replaces its earlier one, and with it the earlier fingerprint
+      for _, t in ipairs(img:get_tags()) do
+        if has_prefix(t.name, EDIT) then img:detach_tag(t) end
+      end
+      img:apply_sidecar(arg)
     elseif img and action == "tag" then
       img:attach_tag(dt.tags.create(arg))
     end

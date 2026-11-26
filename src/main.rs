@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use photoflow::{classify, config, darktable, process, selftest};
+use photoflow::{config, process, selftest};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -68,19 +68,7 @@ fn run_process(
     handover: &std::path::Path,
     plan: &std::path::Path,
 ) -> anyhow::Result<bool> {
-    // darktable-cli is prepared only when a night photo needs the aurora check
-    let mut check: Option<classify::AuroraCheck> = None;
-    process::run(handover, plan, |raw| {
-        if check.is_none() {
-            let work = cfg.data_dir()?.join("process");
-            let dt = darktable::Darktable::prepare(
-                &cfg.darktable.cli,
-                &cfg.darktable_config_dir()?,
-                &work,
-            )?;
-            check = Some(classify::AuroraCheck::new(dt, &work.join("renders"))?);
-        }
-        check.as_ref().unwrap().render(raw)
-    })?;
+    let mut tools = process::RealTools::new(cfg)?;
+    process::run(handover, plan, &mut tools)?;
     Ok(true)
 }

@@ -186,6 +186,15 @@ pub fn scenarios(cfg: &Config) -> Result<bool> {
     Ok(cli_ok && app_ok)
 }
 
+/// The darktable the self-test's reference was last accepted with ("darktable 5.6.1"), if any.
+pub fn accepted_darktable(cfg: &Config) -> Result<Option<String>> {
+    let dirs = Dirs::new(cfg)?;
+    if !dirs.reference.join("meta.toml").is_file() {
+        return Ok(None);
+    }
+    Ok(Some(read_meta(&dirs.reference)?.darktable))
+}
+
 /// Makes the last run's renders the new reference.
 pub fn accept(cfg: &Config) -> Result<bool> {
     let dirs = Dirs::new(cfg)?;

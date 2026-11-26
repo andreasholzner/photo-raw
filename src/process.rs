@@ -16,10 +16,15 @@
 //! Plan, one or more lines per photo, in this order:
 //! ```text
 //! <raw path><TAB>clear            remove the tool's earlier class, open-step and report tags
+//! <raw path><TAB>apply<TAB><xmp>  replace the photo's history with this sidecar's, and remove
+//!                                 the fingerprint tag of the tool's earlier edit
 //! <raw path><TAB>tag<TAB><name>   attach a tag
 //! ```
+//! A photo whose edit is already what its switches ask for gets no lines: nothing changes.
 
 use crate::classify::{self, Class};
+use crate::day_edit::{self, Wanted};
+use crate::edit_state::edit_tag;
 use crate::edit_state::{EditState, LibraryState, edit_state};
 use crate::sidecar;
 use anyhow::{Context, Result, bail};
@@ -53,8 +58,27 @@ pub struct Handover {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Step {
     Clear,
+    Apply(PathBuf),
     Tag(String),
 }
+
+/// What a processing run needs besides the hand-over: darktable-cli, the photos' files.
+pub trait Tools {
+    /// Day, night, aurora or a question (EXIF, and the aurora check for night photos).
+    fn classify(&mut self, p: &Photo) -> Result<Class>;
+    fn sidecar_text(&mut self, p: &Photo) -> Result<String>;
+    /// Solves the day edit's exposure by rendering (US-9).
+    fn day_edit(&mut self, p: &Photo, sidecar: &str, wanted: Wanted) -> Result<day_edit::Solved>;
+    /// Writes an edit for darktable to apply; returns its path.
+    fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf>;
+    /// Why automatic edits are blocked, if they are (a darktable upgrade, US-9).
+    fn edits_blocked(&mut self) -> Result<Option<String>>;
+}
+
+/// The open steps and reports of US-9.
+pub const CHECK_EXPOSURE: &str = "check exposure";
+pub const SNOW_CHECK_LOOK: &str = "snow: check look";
+pub const LOOK_CONFLICT: &str = "look: agx or sigmoid?";
 
 pub fn parse_handover(text: &str) -> Result<Handover> {
     let mut darkroom_open = None;
@@ -82,33 +106,30 @@ pub fn parse_handover(text: &str) -> Result<Handover> {
     })
 }
 
-/// The plan for the handed-over photos. `class_of` classifies a photo the tool may edit.
-pub fn plan(
-    handover: &Handover,
-    mut class_of: impl FnMut(&Photo) -> Result<Class>,
-) -> Vec<(PathBuf, Vec<Step>)> {
+/// The plan for the handed-over photos; each photo is decided on its own.
+pub fn plan(handover: &Handover, tools: &mut dyn Tools) -> Vec<(PathBuf, Vec<Step>)> {
     handover
         .photos
         .iter()
         .map(|p| {
-            let mut steps = vec![Step::Clear];
-            match decide(handover.darkroom_open, p, &mut class_of) {
-                Ok(tags) => steps.extend(tags.into_iter().map(Step::Tag)),
+            let steps = match decide(handover.darkroom_open, p, tools) {
+                Ok(Some(steps)) => steps,
+                Ok(None) => Vec::new(),
                 Err(e) => {
                     eprintln!("{}: {e:#}", p.raw.display());
-                    steps.push(Step::Tag(format!("{LEFT_TAG}could not be processed")));
+                    vec![
+                        Step::Clear,
+                        Step::Tag(format!("{LEFT_TAG}could not be processed")),
+                    ]
                 }
-            }
+            };
             (p.raw.clone(), steps)
         })
         .collect()
 }
 
-fn decide(
-    darkroom_open: bool,
-    p: &Photo,
-    class_of: &mut impl FnMut(&Photo) -> Result<Class>,
-) -> Result<Vec<String>> {
+/// The steps for one photo; `None`: its edit is already right, nothing changes.
+fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Option<Vec<Step>>> {
     let library = LibraryState {
         is_altered: p.altered,
         tags: p.tags.clone(),
@@ -116,22 +137,60 @@ fn decide(
     };
     // the sidecar is read only when its history matters; while the darkroom is open it may be
     // stale (journal 2026-11-24)
-    let state = if darkroom_open || !p.altered {
-        edit_state(&library, &sidecar::History { steps: Vec::new() })
+    let history = if darkroom_open || !p.altered {
+        sidecar::History { steps: Vec::new() }
     } else {
-        edit_state(&library, &sidecar::read(&p.sidecar)?)
+        sidecar::parse(&tools.sidecar_text(p)?)?
     };
+    let state = edit_state(&library, &history);
+    let tag = |t: String| Step::Tag(t);
     if let Some(report) = state.report() {
-        return Ok(vec![format!("{LEFT_TAG}{report}")]);
+        return Ok(Some(vec![Step::Clear, tag(format!("{LEFT_TAG}{report}"))]));
     }
     debug_assert!(matches!(state, EditState::Unedited | EditState::OwnEdit));
-    // the edit itself comes with US-9 and US-10
-    Ok(match class_of(p)? {
-        Class::Day => vec![format!("{CLASS_TAG}day")],
-        Class::Night => vec![format!("{CLASS_TAG}night")],
-        Class::Aurora => vec![format!("{CLASS_TAG}aurora")],
-        Class::Ask(q) => vec![format!("{OPEN_TAG}{}", q.open_step())],
-    })
+    let class = match tools.classify(p)? {
+        Class::Day => "day",
+        Class::Night => "night",
+        Class::Aurora => "aurora",
+        Class::Ask(q) => {
+            return Ok(Some(vec![
+                Step::Clear,
+                tag(format!("{OPEN_TAG}{}", q.open_step())),
+            ]));
+        }
+    };
+    let mut steps = vec![Step::Clear, tag(format!("{CLASS_TAG}{class}"))];
+    if class != "day" {
+        // the night and aurora edits come with US-10 and US-21
+        return Ok(Some(steps));
+    }
+
+    // US-9: the day edit
+    let switches = day_edit::switches(&p.tags);
+    if switches.look_conflict {
+        steps.push(tag(format!("{OPEN_TAG}{LOOK_CONFLICT}")));
+        return Ok(Some(steps));
+    }
+    let wanted = Wanted::from(switches);
+    if state == EditState::OwnEdit && day_edit::current(&history) == Some(wanted) {
+        return Ok(None);
+    }
+    if let Some(why) = tools.edits_blocked()? {
+        steps.push(tag(format!("{LEFT_TAG}{why}")));
+        return Ok(Some(steps));
+    }
+    let text = tools.sidecar_text(p)?;
+    let solved = tools.day_edit(p, &text, wanted)?;
+    let path = tools.write_edit(p, &solved.xmp)?;
+    steps.insert(1, Step::Apply(path));
+    steps.push(tag(edit_tag(&sidecar::parse(&solved.xmp)?)));
+    if !solved.reached {
+        steps.push(tag(format!("{OPEN_TAG}{CHECK_EXPOSURE}")));
+    }
+    if solved.snow && switches.look.is_none() {
+        steps.push(tag(format!("{OPEN_TAG}{SNOW_CHECK_LOOK}")));
+    }
+    Ok(Some(steps))
 }
 
 pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
@@ -141,6 +200,7 @@ pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
             let raw = raw.display();
             match s {
                 Step::Clear => out.push_str(&format!("{raw}\tclear\n")),
+                Step::Apply(x) => out.push_str(&format!("{raw}\tapply\t{}\n", x.display())),
                 Step::Tag(t) => out.push_str(&format!("{raw}\ttag\t{t}\n")),
             }
         }
@@ -148,24 +208,121 @@ pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
     out
 }
 
-/// `photoflow process <hand-over> <plan>`: classifies with EXIF and, for night photos, the
-/// aurora check (`check`).
-pub fn run(
-    handover: &Path,
-    plan_file: &Path,
-    mut check: impl FnMut(&Path) -> Result<crate::aurora::Image>,
-) -> Result<()> {
+/// `photoflow process <hand-over> <plan>`.
+pub fn run(handover: &Path, plan_file: &Path, tools: &mut dyn Tools) -> Result<()> {
     let text = std::fs::read_to_string(handover)
         .with_context(|| format!("cannot read {}", handover.display()))?;
     let h = parse_handover(&text)?;
-    let p = plan(&h, |photo| {
-        let exposure = crate::exif::read(&photo.raw)?;
-        classify::classify(&exposure, || check(&photo.raw))
-    });
+    let p = plan(&h, tools);
     let tmp = plan_file.with_extension("tmp");
     std::fs::write(&tmp, format_plan(&p))?;
     std::fs::rename(&tmp, plan_file)?;
     Ok(())
+}
+
+/// The tools of a real run: EXIF, darktable-cli, files below `work`.
+pub struct RealTools<'a> {
+    pub cfg: &'a crate::config::Config,
+    pub work: PathBuf,
+    dt: Option<crate::darktable::Darktable>,
+    check: Option<classify::AuroraCheck>,
+}
+
+impl<'a> RealTools<'a> {
+    pub fn new(cfg: &'a crate::config::Config) -> Result<Self> {
+        Ok(Self {
+            cfg,
+            work: cfg.data_dir()?.join("process"),
+            dt: None,
+            check: None,
+        })
+    }
+
+    fn darktable(&mut self) -> Result<&crate::darktable::Darktable> {
+        if self.dt.is_none() {
+            self.dt = Some(crate::darktable::Darktable::prepare(
+                &self.cfg.darktable.cli,
+                &self.cfg.darktable_config_dir()?,
+                &self.work.join("darktable-cli"),
+            )?);
+        }
+        Ok(self.dt.as_ref().unwrap())
+    }
+
+    fn render_edit(&mut self, raw: &Path, xmp: &str) -> Result<crate::aurora::Image> {
+        let dir = self.work.join("renders");
+        std::fs::create_dir_all(&dir)?;
+        let name = raw
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let x = dir.join(format!("{name}.day.xmp"));
+        let o = dir.join(format!("{name}.day.pfm"));
+        std::fs::write(&x, xmp)?;
+        self.darktable()?
+            .render(raw, &x, &o, day_edit::RENDER_SIZE)?;
+        crate::aurora::load_pfm(&o)
+    }
+}
+
+impl Tools for RealTools<'_> {
+    fn classify(&mut self, p: &Photo) -> Result<Class> {
+        let exposure = crate::exif::read(&p.raw)?;
+        if self.check.is_none() && crate::scene::classify(&exposure) == crate::scene::Scene::Night {
+            let dt = crate::darktable::Darktable::prepare(
+                &self.cfg.darktable.cli,
+                &self.cfg.darktable_config_dir()?,
+                &self.work.join("aurora-check"),
+            )?;
+            self.check = Some(classify::AuroraCheck::new(
+                dt,
+                &self.work.join("aurora-renders"),
+            )?);
+        }
+        let check = self.check.as_ref();
+        classify::classify(&exposure, || {
+            check
+                .context("no aurora check")
+                .and_then(|c| c.render(&p.raw))
+        })
+    }
+
+    fn sidecar_text(&mut self, p: &Photo) -> Result<String> {
+        std::fs::read_to_string(&p.sidecar)
+            .with_context(|| format!("cannot read {}", p.sidecar.display()))
+    }
+
+    fn day_edit(&mut self, p: &Photo, sidecar: &str, wanted: Wanted) -> Result<day_edit::Solved> {
+        let raw = p.raw.clone();
+        day_edit::solve(sidecar, wanted, |xmp| self.render_edit(&raw, xmp))
+    }
+
+    fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf> {
+        let dir = self.work.join("edits");
+        std::fs::create_dir_all(&dir)?;
+        let name = p
+            .raw
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let path = dir.join(format!("{name}.xmp"));
+        std::fs::write(&path, xmp)?;
+        Ok(path)
+    }
+
+    fn edits_blocked(&mut self) -> Result<Option<String>> {
+        let installed = self.darktable()?.version()?;
+        let accepted = crate::selftest::accepted_darktable(self.cfg)?;
+        Ok(upgrade_block(accepted.as_deref(), &installed).map(str::to_string))
+    }
+}
+
+/// The report when edits are blocked: the self-test hasn't been accepted with the installed
+/// darktable (US-9).
+pub fn upgrade_block(accepted: Option<&str>, installed: &str) -> Option<&'static str> {
+    (accepted != Some(installed)).then_some("run the self-test after the darktable upgrade")
 }
 
 #[cfg(test)]
@@ -179,6 +336,70 @@ mod tests {
             altered as u8,
             tags.join("\u{1f}")
         )
+    }
+
+    /// Tools with a given classification; day edits are built at 0 EV without rendering.
+    struct Fake<F: FnMut(&Photo) -> Result<Class>> {
+        class: F,
+        blocked: Option<String>,
+        reached: bool,
+        snow: bool,
+    }
+
+    fn fake<F: FnMut(&Photo) -> Result<Class>>(class: F) -> Fake<F> {
+        Fake {
+            class,
+            blocked: None,
+            reached: true,
+            snow: false,
+        }
+    }
+
+    const IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description xmlns:darktable="http://darktable.sf.net/" darktable:history_end="1" darktable:iop_order_version="4">
+<darktable:history><rdf:Seq>
+<rdf:li darktable:num="0" darktable:operation="exposure" darktable:enabled="1" darktable:modversion="7" darktable:params="00000000000000000000003f0000000000000000" darktable:multi_name="" darktable:multi_priority="0" darktable:blendop_version="14" darktable:blendop_params="00"/>
+</rdf:Seq></darktable:history></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+
+    impl<F: FnMut(&Photo) -> Result<Class>> Tools for Fake<F> {
+        fn classify(&mut self, p: &Photo) -> Result<Class> {
+            (self.class)(p)
+        }
+        fn sidecar_text(&mut self, _: &Photo) -> Result<String> {
+            Ok(IMPORT.to_string())
+        }
+        fn day_edit(
+            &mut self,
+            _: &Photo,
+            sidecar: &str,
+            wanted: Wanted,
+        ) -> Result<day_edit::Solved> {
+            Ok(day_edit::Solved {
+                xmp: day_edit::build(sidecar, wanted, 0.0)?,
+                ev: 0.0,
+                reached: self.reached,
+                snow: self.snow,
+            })
+        }
+        fn write_edit(&mut self, p: &Photo, _: &str) -> Result<PathBuf> {
+            Ok(p.raw.with_extension("edit.xmp"))
+        }
+        fn edits_blocked(&mut self) -> Result<Option<String>> {
+            Ok(self.blocked.clone())
+        }
+    }
+
+    fn tags_of(steps: &[Step]) -> Vec<String> {
+        steps
+            .iter()
+            .filter_map(|s| match s {
+                Step::Tag(t) if !t.starts_with(crate::edit_state::EDIT_TAG_PREFIX) => {
+                    Some(t.clone())
+                }
+                _ => None,
+            })
+            .collect()
     }
 
     #[test]
@@ -204,26 +425,122 @@ mod tests {
             photo("/p/b.ARW", false, &[])
         );
         let h = parse_handover(&text).unwrap();
-        let p = plan(&h, |ph| {
-            Ok(if ph.raw.ends_with("a.ARW") {
-                Class::Day
-            } else {
-                Class::Ask(Question::DayOrNight)
-            })
-        });
+        let p = plan(
+            &h,
+            &mut fake(|ph: &Photo| {
+                Ok(if ph.raw.ends_with("a.ARW") {
+                    Class::Night
+                } else {
+                    Class::Ask(Question::DayOrNight)
+                })
+            }),
+        );
         assert_eq!(
             format_plan(&p),
-            "/p/a.ARW\tclear\n/p/a.ARW\ttag\tphotoflow|class|day\n\
+            "/p/a.ARW\tclear\n/p/a.ARW\ttag\tphotoflow|class|night\n\
              /p/b.ARW\tclear\n/p/b.ARW\ttag\tphotoflow|open|day or night?\n"
+        );
+    }
+
+    #[test]
+    fn a_day_photo_gets_its_edit_applied_and_tagged() {
+        let text = format!("darkroom\t0\n{}\n", photo("/p/a.ARW", false, &[]));
+        let p = plan(
+            &parse_handover(&text).unwrap(),
+            &mut fake(|_: &Photo| Ok(Class::Day)),
+        );
+        let steps = &p[0].1;
+        assert_eq!(steps[0], Step::Clear);
+        assert_eq!(steps[1], Step::Apply(PathBuf::from("/p/a.edit.xmp")));
+        assert!(
+            steps
+                .iter()
+                .any(|s| matches!(s, Step::Tag(t) if t.starts_with("photoflow|edit|")))
+        );
+        assert_eq!(tags_of(steps), vec!["photoflow|class|day"]);
+    }
+
+    #[test]
+    fn uncertain_day_photos_are_flagged() {
+        let text = format!(
+            "darkroom\t0\n{}\n{}\n",
+            photo("/p/a.ARW", false, &[]),
+            photo("/p/b.ARW", false, &["photoflow|look|agx"])
+        );
+        let mut t = fake(|_: &Photo| Ok(Class::Day));
+        t.reached = false;
+        t.snow = true;
+        let p = plan(&parse_handover(&text).unwrap(), &mut t);
+        assert_eq!(
+            tags_of(&p[0].1),
+            vec![
+                "photoflow|class|day",
+                "photoflow|open|check exposure",
+                "photoflow|open|snow: check look"
+            ]
+        );
+        // a look chosen: no snow question
+        assert_eq!(
+            tags_of(&p[1].1),
+            vec!["photoflow|class|day", "photoflow|open|check exposure"]
+        );
+    }
+
+    #[test]
+    fn contradictory_look_tags_are_a_question_and_nothing_is_edited() {
+        let text = format!(
+            "darkroom\t0\n{}\n",
+            photo(
+                "/p/a.ARW",
+                false,
+                &["photoflow|look|agx", "photoflow|look|sigmoid"]
+            )
+        );
+        let p = plan(
+            &parse_handover(&text).unwrap(),
+            &mut fake(|_: &Photo| Ok(Class::Day)),
+        );
+        assert!(!p[0].1.iter().any(|s| matches!(s, Step::Apply(_))));
+        assert_eq!(
+            tags_of(&p[0].1),
+            vec![
+                "photoflow|class|day",
+                "photoflow|open|look: agx or sigmoid?"
+            ]
+        );
+    }
+
+    #[test]
+    fn after_a_darktable_upgrade_nothing_is_edited() {
+        assert_eq!(
+            upgrade_block(Some("darktable 5.6.1"), "darktable 5.6.1"),
+            None
+        );
+        assert!(upgrade_block(Some("darktable 5.6.1"), "darktable 5.8.0").is_some());
+        assert!(upgrade_block(None, "darktable 5.6.1").is_some());
+        let text = format!("darkroom\t0\n{}\n", photo("/p/a.ARW", false, &[]));
+        let mut t = fake(|_: &Photo| Ok(Class::Day));
+        t.blocked = Some("run the self-test after the darktable upgrade".into());
+        let p = plan(&parse_handover(&text).unwrap(), &mut t);
+        assert!(!p[0].1.iter().any(|s| matches!(s, Step::Apply(_))));
+        assert_eq!(
+            tags_of(&p[0].1),
+            vec![
+                "photoflow|class|day",
+                "photoflow|left alone|run the self-test after the darktable upgrade"
+            ]
         );
     }
 
     #[test]
     fn darkroom_open_leaves_everything_alone_unread() {
         let text = format!("darkroom\t1\n{}\n", photo("/nowhere/a.ARW", true, &[]));
-        let p = plan(&parse_handover(&text).unwrap(), |_| {
-            panic!("classified a photo while the darkroom was open")
-        });
+        let p = plan(
+            &parse_handover(&text).unwrap(),
+            &mut fake(|_: &Photo| -> Result<Class> {
+                panic!("classified a photo while the darkroom was open")
+            }),
+        );
         assert_eq!(
             p[0].1,
             vec![
@@ -240,12 +557,15 @@ mod tests {
             photo("/p/bad.ARW", false, &[]),
             photo("/p/good.ARW", false, &[])
         );
-        let p = plan(&parse_handover(&text).unwrap(), |ph| {
-            if ph.raw.ends_with("bad.ARW") {
-                bail!("no EXIF")
-            }
-            Ok(Class::Night)
-        });
+        let p = plan(
+            &parse_handover(&text).unwrap(),
+            &mut fake(|ph: &Photo| {
+                if ph.raw.ends_with("bad.ARW") {
+                    bail!("no EXIF")
+                }
+                Ok(Class::Night)
+            }),
+        );
         assert_eq!(
             p[0].1[1],
             Step::Tag("photoflow|left alone|could not be processed".into())
