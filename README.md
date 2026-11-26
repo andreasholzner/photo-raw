@@ -39,7 +39,7 @@ things:
 ```sh
 photoflow selftest init       # once: render the set and store it as the reference
 photoflow selftest run        # render and compare, then run the darktable scenarios
-photoflow selftest scenarios  # only the darktable scenarios (about 3–4 minutes)
+photoflow selftest scenarios  # only the darktable scenarios (about 10 minutes)
 photoflow selftest accept     # make the last renders the new reference (intended changes)
 ```
 
@@ -48,7 +48,7 @@ you can open side by side. darktable-cli runs with a private copy of your darkta
 configuration and an in-memory library.
 
 The `@darktable-cli` scenarios first render two photos of the reference set small, with
-darktable-cli (a few seconds). For the other scenarios darktable runs for a few minutes on a
+darktable-cli (a few seconds). For the other scenarios darktable runs for about 10 minutes on a
 virtual screen (needs `xvfb-run`, Manjaro package `xorg-server-xvfb`): nothing shows on your
 desktop, and it ends by itself. Your own darktable can stay open meanwhile. It runs with a
 private copy of your configuration, its own library and copies of one raw of the reference set.

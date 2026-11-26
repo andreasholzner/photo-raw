@@ -86,8 +86,9 @@ end
 
 function commands.photoflow_runs() return tostring(photoflow.runs) end
 
+-- a run renders each day photo several times (US-9): allow 20 minutes
 function commands.wait_photoflow(before)
-  for _ = 1, 600 do
+  for _ = 1, 2400 do
     if photoflow.runs > tonumber(before) and not photoflow.busy then
       local err = photoflow.last_error or ""
       photoflow.last_error = nil
@@ -95,7 +96,7 @@ function commands.wait_photoflow(before)
     end
     dt.control.sleep(500)
   end
-  error("photoflow's script didn't finish within 5 minutes")
+  error("photoflow's script didn't finish within 20 minutes")
 end
 
 function commands.process(...)

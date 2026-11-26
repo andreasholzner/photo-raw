@@ -254,8 +254,8 @@ impl App {
                     self.work.join("darktable.log").display()
                 );
             }
-            if start.elapsed() > Duration::from_secs(300) {
-                bail!("darktable didn't answer {} within 5 minutes", args[0]);
+            if start.elapsed() > Duration::from_secs(1500) {
+                bail!("darktable didn't answer {} within 25 minutes", args[0]);
             }
             std::thread::sleep(Duration::from_millis(100));
         }
