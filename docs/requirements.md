@@ -306,8 +306,12 @@ by hand per photo, as a straight line; a straight line fits poorly where a peak 
 **Planned 📋** — As the owner, I mark panorama sets in darktable, and the tool proposes sets I may
 have missed.
 
-**Acceptance criteria:** Sets are marked with a tag or label. Proposals (short time gaps, same
-focal length) are listed for confirmation and never stitched unconfirmed.
+**Acceptance criteria:** [us-12-panorama-sets.feature](../features/us-12-panorama-sets.feature)
+
+**Notes:** Proposals are consecutive photos at most 10 s apart with the same focal length; exposure
+brackets belong to their panorama's set. The source photos of past panoramas no longer exist (the
+owner deletes them after stitching), so the threshold is the owner's, not fitted. Used only
+through the to-do panel (US-14).
 
 ### US-13 — Stitch panoramas
 
