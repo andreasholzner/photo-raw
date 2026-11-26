@@ -60,7 +60,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-6](#us-6--more-analysis-on-edited-photos)                   | ✅     | More analysis on edited photos                 | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)                    | ✅     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)                  | 🚧     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
-| [US-9](#us-9--day-auto-edit)                                    | 📋     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
+| [US-9](#us-9--day-auto-edit)                                    | 🚧     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
 | [US-10](#us-10--aurora-auto-edit)                               | 📋     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
 | [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
 | [US-12](#us-12--panorama-sets)                                  | 📋     | Panorama sets                                  | [Panoramas](#panoramas)                         |
@@ -73,6 +73,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 | [US-21](#us-21--night-auto-edit)                                | 🚧     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
+| [US-22](#us-22--dehaze-proposal-for-long-range-views)           | ⏳     | Dehaze proposal for long-range views           | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -213,18 +214,15 @@ process and every edit I made by hand.
 
 ### US-9 — Day auto-edit
 
-**Planned 📋** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
+**In progress 🚧** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
 I only correct outliers.
 
-**Acceptance criteria:** One of the two day looks (US-3) — AgX punchy by default, since no rule
-predicted the owner's choice (US-6) — plus local contrast "clarity"; "dehaze" proposed for
-long-range views (US-4). No sharpening in the edit (print sharpening comes with the export, US-5).
-Exposure per photo by the look's rule, with the targets found in US-6: the brightest 1 % for
-sigmoid, the brightest 10 % for AgX. The owner can switch a photo to sigmoid and switch the dehaze
-proposal per photo; the switches are kept as data for a later look rule. Photos where a rule is uncertain are
-flagged. The self-test (US-2) also checks the tool's edits of the reference set's day photos against
-the tool's previous output; intended changes become the new baseline. After a darktable upgrade,
-automatic edits are blocked until the self-test has run and its result was accepted.
+**Acceptance criteria:** [us-09-day-auto-edit.feature](../features/us-09-day-auto-edit.feature).
+Not executable: the self-test (US-2) also checks the tool's edits of the reference set's day photos
+against the tool's previous output; intended changes become the new baseline.
+
+**Notes:** The look's targets are from US-6 (AgX: brightest 10 % at 0.675; sigmoid: brightest 1 %
+at 0.885). Dehaze is off by default; proposing it for long-range views is US-22.
 
 **Decisions:** US-9 → ADR-0004
 
@@ -279,6 +277,15 @@ _DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editin
 follows today's best practice for night photography and is compared side by side with those
 edits, like the day and aurora bases (US-3, US-18). A daytime long exposure with an ND filter
 counts as night by its exposure (US-7); the owner edits those rare photos by hand.
+
+### US-22 — Dehaze proposal for long-range views
+
+**Backlog ⏳** — As the owner, I want diffuse or sharpen "dehaze" proposed where a photo shows
+distant mountain ranges, so I don't have to switch it on by hand on every long-range view.
+
+**Notes:** US-4 found that "dehaze" helps long-range views (separates distant layers, thins the
+blue veil); no rule tells such views apart yet. Until then the owner switches dehaze on per photo
+with a tag (US-9); those switches are the data to find a rule from.
 
 ## Panoramas
 
