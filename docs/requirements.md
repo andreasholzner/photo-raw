@@ -72,7 +72,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-18](#us-18--aurora-base-pipeline)                           | ✅     | Aurora base pipeline                           | [Foundation](#foundation)                       |
 | [US-19](#us-19--own-edits-recognised-after-a-darktable-upgrade) | 📋     | Own edits recognised after a darktable upgrade | [Automatic editing](#automatic-editing)         |
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
-| [US-21](#us-21--night-auto-edit)                                | 📋     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
+| [US-21](#us-21--night-auto-edit)                                | 🚧     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -270,7 +270,7 @@ for sure still counts as edited by hand (ADR-0003).
 
 ### US-21 — Night auto-edit
 
-**Planned 📋** — As the owner, I want night photos without aurora — stars, the Milky Way, moonlit
+**In progress 🚧** — As the owner, I want night photos without aurora — stars, the Milky Way, moonlit
 mountains, city lights below — edited automatically close to my favourite night edits, so I only
 correct outliers.
 

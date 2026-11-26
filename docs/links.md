@@ -15,6 +15,8 @@ References used in the analysis and planning (see [journal.md](journal.md) for c
 - [haze removal](https://docs.darktable.org/usermanual/3.8/en/module-reference/processing-modules/haze-removal/)
   — meant for real haze; increases contrast; fails on images without haze
 - [diffuse or sharpen](https://docs.darktable.org/usermanual/development/en/module-reference/processing-modules/diffuse/)
+- [darktable 5.6 user manual (PDF)](https://docs.darktable.org/usermanual/5.6/en/darktable_user_manual.pdf)
+  — astrophoto denoise (for colour and luma noise separately), profiled denoise, color calibration
 - [Linux Magazine: darktable 5.4's scene-referred workflow](https://www.linux-magazine.com/Issues/2026/306/filmic-rgb)
 - [darktable Lua API documentation](https://docs.darktable.org/lua/stable/)
 - [darktable releases (5.6.1 AppImage used in the dev container)](https://github.com/darktable-org/darktable/releases/tag/release-5.6.1)
@@ -30,3 +32,14 @@ References used in the analysis and planning (see [journal.md](journal.md) for c
 - [Nikon: 5 tips for better northern lights photographs](https://www.nikon.co.uk/en_GB/learn-and-explore/magazine/tips-and-tricks/5-tips-for-better-northern-lights-photographs)
 - [Fstoppers: six-step program to processing the aurora](https://fstoppers.com/originals/advanced-six-step-program-processing-aurora-lightroom-and-photoshop-164984)
 - [PetaPixel: forecasting, shooting and post-processing the northern lights](https://petapixel.com/2018/10/02/the-ultimate-guide-to-forecasting-shooting-and-post-processing-the-northern-lights)
+
+## Night (Milky Way, stars) editing
+
+- [pixls.us: resources for editing astrophotography](https://discuss.pixls.us/t/resources-for-editing-astrophotography/43340)
+  — darktable: color calibration on the light-pollution halo, global contrast with sigmoid
+- [PetaPixel: from a flat, noisy RAW to a finished Milky Way photograph (2026)](https://petapixel.com/2026/06/24/how-to-turn-a-flat-noisy-raw-into-a-finished-milky-way-photograph/)
+  — every contrast step risks bringing noise back
+- [Photography Life: how to edit Milky Way photos](https://photographylife.com/how-to-edit-milky-way-lightroom)
+- [Expert Photography: editing Milky Way photos](https://expertphotography.com/post-processing-milky-way-photography-settings-presets)
+  — white balance first: near neutral, slightly towards blue/magenta; dehaze with restraint; no
+  sharpening
