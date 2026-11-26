@@ -278,11 +278,21 @@ for sure still counts as edited by hand (ADR-0003).
 mountains, city lights below — edited automatically close to my favourite night edits, so I only
 correct outliers.
 
+**Acceptance criteria:** Night photos get the night edit, chosen side by side against the owner's
+favourite night edits (journal 2026-11-26, rounds 1–12): AgX punchy, raw chromatic aberrations,
+chroma-only plus a non-local-means luma denoise, local contrast "clarity" twice and diffuse
+"local contrast | fine"; white balance for slightly blue stars; color balance rgb tints for the
+dark sky and the Milky Way glow; a tone curve after AgX that lifts the stars; above the horizon a
+tone equalizer that darkens the sky between the stars; below it a brightness step and a color
+calibration for the foreground. Exposure per photo for a sky median of 0.065; the owner raises
+single photos with the exposure slider. The self-test checks the tool's edits of the reference
+set's night photos like the day edits, and the upgrade block of US-9 applies.
+
 **Notes:** The look to aim for is the owner's edits of DSC00461 (2018), _DSC0905, _DSC0909,
-_DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The pipeline
-follows today's best practice for night photography and is compared side by side with those
-edits, like the day and aurora bases (US-3, US-18). A daytime long exposure with an ND filter
-counts as night by its exposure (US-7); the owner edits those rare photos by hand.
+_DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The
+foreground targets came from those edits; a rule for photos without such an edit is still open.
+The horizon line comes from US-23. A daytime long exposure with an ND filter counts as night by its
+exposure (US-7); the owner edits those rare photos by hand.
 
 ### US-22 — Dehaze proposal for long-range views
 

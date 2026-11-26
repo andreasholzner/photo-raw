@@ -1464,3 +1464,4 @@ foreground crop); _DSC0914 has no foreground.
 - _DSC0909: only a thin strip below the horizon (0.97) — the solvers run into their limits.
 - A brighter foreground lifts the sky near the horizon a little: the local-contrast steps work on
   neighbourhoods (an extreme +2 EV lifted the sky by up to 15 %).
+- **Owner's verdict on round 12:** H2 is fine.
