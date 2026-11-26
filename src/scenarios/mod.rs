@@ -35,6 +35,10 @@ pub const FEATURES: &[(&str, &str)] = &[
         "us-09-day-auto-edit.feature",
         include_str!("../../features/us-09-day-auto-edit.feature"),
     ),
+    (
+        "us-12-panorama-sets.feature",
+        include_str!("../../features/us-12-panorama-sets.feature"),
+    ),
 ];
 
 /// A change the owner makes in the darkroom.
@@ -71,6 +75,14 @@ pub trait Driver: Send {
     /// Every photo in the library the tool has processed (it carries the tool's class, open-step
     /// or report tags).
     fn processed(&mut self) -> Result<Vec<PathBuf>>;
+    // US-12
+    /// Selects these photos in the lighttable.
+    fn select(&mut self, photos: &[PathBuf]) -> Result<()>;
+    fn selection(&mut self) -> Result<Vec<PathBuf>>;
+    /// A panorama action of photoflow's script: "mark", "confirm", "reject" (on the selection),
+    /// "choose:<proposal tag>".
+    fn pano(&mut self, action: &str) -> Result<()>;
+    fn tags_of(&mut self, photo: &Path) -> Result<Vec<String>>;
     /// Fingerprints of the photos' edits (their sidecars, as darktable writes them) and their tags.
     fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>>;
 
@@ -115,6 +127,9 @@ pub struct ScenarioWorld {
     edit_before: Option<String>,
     upgrade: (Option<String>, Option<String>),
     blocked: Option<&'static str>,
+    /// US-12: photos for the proposal rule (gaps, focal lengths), and the proposals' sizes.
+    shots: Vec<crate::panorama::Shot>,
+    proposal_sizes: Option<Vec<usize>>,
     /// US-8: the folder's edits (fingerprint, sorted tags) before the second run.
     edits_before: Vec<(String, Vec<String>)>,
     driver: Arc<Mutex<dyn Driver>>,
@@ -145,6 +160,8 @@ impl ScenarioWorld {
             upgrade: (None, None),
             blocked: None,
             edits_before: Vec::new(),
+            shots: Vec::new(),
+            proposal_sizes: None,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -416,9 +433,19 @@ fn processed(w: &mut ScenarioWorld) {
         w.blocked = crate::process::upgrade_block(Some(&accepted), &installed);
         return;
     }
+    if !w.shots.is_empty() {
+        let p = crate::panorama::proposals(&w.shots);
+        w.proposal_sizes = Some(p.iter().map(Vec::len).collect());
+        return;
+    }
     if w.on_driver {
         w.edit_before = Some(w.with("read the sidecar", |d| d.sidecar_text()));
         start_tool(w);
+        return;
+    }
+    if !w.folder.is_empty() {
+        let folder = w.folder.clone();
+        w.with("start the tool", |d| d.start_tool_on(&folder));
         return;
     }
     let exposure = w.exposure.expect("a photo");
@@ -673,6 +700,219 @@ fn installed(w: &mut ScenarioWorld, version: String) {
 #[then(expr = "the tool edits no photo and reports {string}")]
 fn edits_blocked(w: &mut ScenarioWorld, report: String) {
     assert_eq!(w.blocked, Some(report.as_str()));
+}
+
+// ---------------------------------------------------------------------------------------------
+// US-12 — Panorama sets
+// ---------------------------------------------------------------------------------------------
+
+fn list(s: &str) -> Vec<f64> {
+    s.split(',')
+        .map(|x| x.trim().parse().expect("a number"))
+        .collect()
+}
+
+#[given(expr = "photos taken {} seconds apart with focal lengths {}")]
+fn shots_apart(w: &mut ScenarioWorld, gaps: String, focal: String) {
+    let (gaps, focal) = (list(&gaps), list(&focal));
+    let mut t = 0.0;
+    w.shots = focal
+        .iter()
+        .enumerate()
+        .map(|(i, &f)| {
+            if i > 0 {
+                t += gaps[i - 1];
+            }
+            crate::panorama::Shot {
+                name: format!("_DSC{:04}", i + 1),
+                time: t,
+                focal_mm: Some(f),
+                excluded: false,
+            }
+        })
+        .collect();
+}
+
+#[then(regex = r"^the tool proposes (no set|\w+ sets? of \d+)$")]
+fn proposes(w: &mut ScenarioWorld, what: String) {
+    let words = |n: &str| match n {
+        "one" => 1,
+        "two" => 2,
+        "three" => 3,
+        other => other.parse().expect("a count"),
+    };
+    let expected: Vec<usize> = match what.split_whitespace().collect::<Vec<_>>()[..] {
+        ["no", "set"] => vec![],
+        [k, "set" | "sets", "of", n] => vec![words(n); words(k)],
+        _ => panic!("unknown: {what}"),
+    };
+    assert_eq!(w.proposal_sizes.as_ref().expect("processed"), &expected);
+}
+
+fn first_stem(photos: &[PathBuf]) -> String {
+    let mut names: Vec<String> = photos
+        .iter()
+        .map(|p| p.file_stem().unwrap().to_string_lossy().to_string())
+        .collect();
+    names.sort();
+    names.remove(0)
+}
+
+fn folder_tags(w: &mut ScenarioWorld, photos: &[PathBuf]) -> Vec<Vec<String>> {
+    photos
+        .iter()
+        .map(|p| w.with("read tags", |d| d.tags_of(p)))
+        .collect()
+}
+
+#[given("three photos in a folder")]
+fn three_photos(w: &mut ScenarioWorld) {
+    w.folder = w.with("import a folder without the tool", |d| d.old_folder(3));
+}
+
+#[when("I select them and mark them as a panorama set")]
+fn mark_selected(w: &mut ScenarioWorld) {
+    let f = w.folder.clone();
+    w.with("select", |d| d.select(&f));
+    w.with("mark as a set", |d| d.pano("mark"));
+}
+
+#[then("all three carry the set tag named after the first of them")]
+fn set_tag_on_all(w: &mut ScenarioWorld) {
+    let f = w.folder.clone();
+    let tag = format!("{}{}", crate::panorama::SET_TAG, first_stem(&f));
+    for tags in folder_tags(w, &f) {
+        assert!(tags.contains(&tag), "no {tag}: {tags:?}");
+    }
+}
+
+#[given("a folder with photos taken in quick succession")]
+fn quick_succession(w: &mut ScenarioWorld) {
+    w.folder = w.with("import a folder without the tool", |d| d.old_folder(3));
+}
+
+#[then(expr = "the open step {string} lists them")]
+fn open_step_lists_them(w: &mut ScenarioWorld, name: String) {
+    let f = w.folder.clone();
+    let tag = format!("{}{name}", crate::process::OPEN_TAG);
+    for tags in folder_tags(w, &f) {
+        assert!(tags.contains(&tag), "no open step {name:?}: {tags:?}");
+    }
+}
+
+#[given("a folder with a panorama set I marked")]
+fn folder_with_set(w: &mut ScenarioWorld) {
+    w.folder = w.with("import a folder without the tool", |d| d.old_folder(3));
+    mark_selected(w);
+}
+
+fn no_proposal(w: &mut ScenarioWorld) {
+    let f = w.folder.clone();
+    for tags in folder_tags(w, &f) {
+        assert!(
+            !tags
+                .iter()
+                .any(|t| t.starts_with(crate::panorama::PROPOSAL_TAG)),
+            "proposed: {tags:?}"
+        );
+    }
+}
+
+#[then("the tool proposes no set for its photos")]
+fn no_set_for_its(w: &mut ScenarioWorld) {
+    no_proposal(w);
+}
+
+#[then("the tool proposes no set for these photos")]
+fn no_set_for_these(w: &mut ScenarioWorld) {
+    no_proposal(w);
+}
+
+fn proposed_set(w: &mut ScenarioWorld, n: usize) {
+    w.folder = w.with("import a folder without the tool", |d| d.old_folder(n));
+    let f = w.folder.clone();
+    w.with("start the tool", |d| d.start_tool_on(&f));
+}
+
+#[given("a proposed set")]
+fn a_proposed_set(w: &mut ScenarioWorld) {
+    proposed_set(w, 3);
+}
+
+#[given("a proposed set of four photos")]
+fn proposed_four(w: &mut ScenarioWorld) {
+    proposed_set(w, 4);
+}
+
+fn choose(w: &mut ScenarioWorld) {
+    let tag = format!(
+        "{}{}",
+        crate::panorama::PROPOSAL_TAG,
+        first_stem(&w.folder.clone())
+    );
+    w.with("choose the proposal", |d| d.pano(&format!("choose:{tag}")));
+}
+
+#[when("I choose it in the to-do panel")]
+fn choose_it(w: &mut ScenarioWorld) {
+    choose(w);
+}
+
+#[then("darktable selects exactly its photos")]
+fn selects_exactly(w: &mut ScenarioWorld) {
+    let mut got = w.with("read the selection", |d| d.selection());
+    let mut want = w.folder.clone();
+    got.sort();
+    want.sort();
+    assert_eq!(got, want);
+}
+
+#[when("I choose it, remove one photo from the selection and confirm")]
+fn choose_trim_confirm(w: &mut ScenarioWorld) {
+    choose(w);
+    let three = w.folder[..3].to_vec();
+    w.with("select", |d| d.select(&three));
+    w.with("confirm", |d| d.pano("confirm"));
+}
+
+#[then("the three selected photos carry the same set tag")]
+fn three_same_set(w: &mut ScenarioWorld) {
+    let three = w.folder[..3].to_vec();
+    let tag = format!("{}{}", crate::panorama::SET_TAG, first_stem(&three));
+    for tags in folder_tags(w, &three) {
+        assert!(tags.contains(&tag), "no {tag}: {tags:?}");
+    }
+}
+
+#[then("the fourth photo carries no set or proposal tag")]
+fn fourth_free(w: &mut ScenarioWorld) {
+    let fourth = w.folder[3].clone();
+    let tags = w.with("read tags", |d| d.tags_of(&fourth));
+    assert!(
+        !tags.iter().any(|t| t.starts_with("photoflow|panorama")),
+        "still: {tags:?}"
+    );
+}
+
+#[then(expr = "the open step {string} no longer lists them")]
+fn open_step_gone(w: &mut ScenarioWorld, name: String) {
+    let f = w.folder.clone();
+    let tag = format!("{}{name}", crate::process::OPEN_TAG);
+    for tags in folder_tags(w, &f) {
+        assert!(!tags.contains(&tag), "still listed: {tags:?}");
+    }
+}
+
+#[when("I choose it and reject it")]
+fn choose_reject(w: &mut ScenarioWorld) {
+    choose(w);
+    w.with("reject", |d| d.pano("reject"));
+}
+
+#[when("the photos are processed again")]
+fn processed_again(w: &mut ScenarioWorld) {
+    let f = w.folder.clone();
+    w.with("start the tool", |d| d.start_tool_on(&f));
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -11,6 +11,7 @@ pub mod edit_state;
 pub mod exif;
 pub mod image_diff;
 pub mod locate;
+pub mod panorama;
 pub mod process;
 pub mod reference_set;
 pub mod scenarios;

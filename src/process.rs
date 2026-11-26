@@ -19,6 +19,7 @@
 //! <raw path><TAB>apply<TAB><xmp>  replace the photo's history with this sidecar's, and remove
 //!                                 the fingerprint tag of the tool's earlier edit
 //! <raw path><TAB>tag<TAB><name>   attach a tag
+//! <raw path><TAB>untag<TAB><prefix>  detach every tag starting with this
 //! ```
 //! A photo whose edit is already what its switches ask for gets no lines: nothing changes.
 
@@ -60,6 +61,7 @@ pub enum Step {
     Clear,
     Apply(PathBuf),
     Tag(String),
+    Untag(String),
 }
 
 /// What a processing run needs besides the hand-over: darktable-cli, the photos' files.
@@ -73,6 +75,8 @@ pub trait Tools {
     fn clipped_share(&mut self, p: &Photo) -> Result<f64>;
     /// Writes an edit for darktable to apply; returns its path.
     fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf>;
+    /// When and with which focal length the photo was taken (US-12).
+    fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture>;
     /// Why automatic edits are blocked, if they are (a darktable upgrade, US-9).
     fn edits_blocked(&mut self) -> Result<Option<String>>;
 }
@@ -108,9 +112,10 @@ pub fn parse_handover(text: &str) -> Result<Handover> {
     })
 }
 
-/// The plan for the handed-over photos; each photo is decided on its own.
+/// The plan for the handed-over photos; each photo is decided on its own, then the photos are
+/// looked at together for panorama proposals (US-12).
 pub fn plan(handover: &Handover, tools: &mut dyn Tools) -> Vec<(PathBuf, Vec<Step>)> {
-    handover
+    let mut plan: Vec<(PathBuf, Vec<Step>)> = handover
         .photos
         .iter()
         .map(|p| {
@@ -127,7 +132,53 @@ pub fn plan(handover: &Handover, tools: &mut dyn Tools) -> Vec<(PathBuf, Vec<Ste
             };
             (p.raw.clone(), steps)
         })
-        .collect()
+        .collect();
+    if !handover.darkroom_open {
+        propose_panoramas(handover, tools, &mut plan);
+    }
+    plan
+}
+
+/// Proposes panorama sets among the handed-over photos and replaces their earlier proposals.
+fn propose_panoramas(
+    handover: &Handover,
+    tools: &mut dyn Tools,
+    plan: &mut [(PathBuf, Vec<Step>)],
+) {
+    use crate::panorama::{self, Shot};
+    let mut shots = Vec::new();
+    for p in &handover.photos {
+        let capture = tools.capture(p).ok();
+        shots.push(Shot {
+            name: p
+                .raw
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+            time: capture.map_or(f64::NAN, |c| c.time),
+            focal_mm: capture.and_then(|c| c.focal_mm),
+            excluded: capture.is_none() || panorama::excluded(&p.tags),
+        });
+    }
+    let open = format!("{OPEN_TAG}{}", panorama::OPEN_STEP);
+    for (i, shot) in shots.iter().enumerate() {
+        if !shot.excluded {
+            plan[i]
+                .1
+                .push(Step::Untag(panorama::PROPOSAL_TAG.to_string()));
+            plan[i].1.push(Step::Untag(open.clone()));
+        }
+    }
+    for set in panorama::proposals(&shots) {
+        let name = &shots[set[0]].name;
+        for &i in &set {
+            plan[i]
+                .1
+                .push(Step::Tag(format!("{}{name}", panorama::PROPOSAL_TAG)));
+            plan[i].1.push(Step::Tag(open.clone()));
+        }
+    }
 }
 
 /// The steps for one photo; `None`: its edit is already right, nothing changes.
@@ -214,6 +265,7 @@ pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
                 Step::Clear => out.push_str(&format!("{raw}\tclear\n")),
                 Step::Apply(x) => out.push_str(&format!("{raw}\tapply\t{}\n", x.display())),
                 Step::Tag(t) => out.push_str(&format!("{raw}\ttag\t{t}\n")),
+                Step::Untag(t) => out.push_str(&format!("{raw}\tuntag\t{t}\n")),
             }
         }
     }
@@ -341,6 +393,10 @@ impl Tools for RealTools<'_> {
         Ok(path)
     }
 
+    fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture> {
+        crate::exif::capture(&p.raw)
+    }
+
     fn edits_blocked(&mut self) -> Result<Option<String>> {
         // the self-test's own darktable: the self-test is what lifts the block
         if std::env::var_os("PHOTOFLOW_SELFTEST_IPC").is_some() {
@@ -423,6 +479,9 @@ mod tests {
         }
         fn edits_blocked(&mut self) -> Result<Option<String>> {
             Ok(self.blocked.clone())
+        }
+        fn capture(&mut self, _: &Photo) -> Result<crate::exif::Capture> {
+            bail!("no capture time")
         }
     }
 
@@ -552,6 +611,9 @@ mod tests {
             fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {
                 panic!("re-edited")
             }
+            fn capture(&mut self, _: &Photo) -> Result<crate::exif::Capture> {
+                bail!("no capture time")
+            }
             fn edits_blocked(&mut self) -> Result<Option<String>> {
                 Ok(None)
             }
@@ -623,6 +685,72 @@ mod tests {
                 "photoflow|left alone|run the self-test after the darktable upgrade"
             ]
         );
+    }
+
+    #[test]
+    fn photos_in_quick_succession_are_proposed_as_a_panorama_set() {
+        struct Timed;
+        impl Tools for Timed {
+            fn classify(&mut self, _: &Photo) -> Result<Class> {
+                Ok(Class::Night)
+            }
+            fn sidecar_text(&mut self, _: &Photo) -> Result<String> {
+                Ok(IMPORT.to_string())
+            }
+            fn day_edit(&mut self, _: &Photo, _: &str, _: Wanted) -> Result<day_edit::Solved> {
+                unreachable!()
+            }
+            fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
+                unreachable!()
+            }
+            fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {
+                unreachable!()
+            }
+            fn edits_blocked(&mut self) -> Result<Option<String>> {
+                Ok(None)
+            }
+            fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture> {
+                let t = match p.raw.file_stem().unwrap().to_str().unwrap() {
+                    "a" => 0.0,
+                    "b" => 5.0,
+                    "c" => 9.0,
+                    _ => 100.0,
+                };
+                Ok(crate::exif::Capture {
+                    time: t,
+                    focal_mm: Some(12.0),
+                })
+            }
+        }
+        let text = format!(
+            "darkroom\t0\n{}\n{}\n{}\n{}\n",
+            photo("/p/a.ARW", false, &[]),
+            photo("/p/b.ARW", false, &[]),
+            photo("/p/c.ARW", false, &["photoflow|not a panorama"]),
+            photo("/p/d.ARW", false, &[])
+        );
+        let p = plan(&parse_handover(&text).unwrap(), &mut Timed);
+        let has = |i: usize, t: &str| p[i].1.contains(&Step::Tag(t.to_string()));
+        assert!(has(0, "photoflow|panorama proposal|a") && has(1, "photoflow|panorama proposal|a"));
+        assert!(has(0, "photoflow|open|panorama sets to confirm"));
+        assert!(
+            !p[2]
+                .1
+                .iter()
+                .any(|s| matches!(s, Step::Tag(t) if t.contains("panorama")))
+        );
+        assert!(
+            !p[3]
+                .1
+                .iter()
+                .any(|s| matches!(s, Step::Tag(t) if t.contains("panorama")))
+        );
+        // earlier proposals are replaced, the rejected photo's tags aren't touched
+        assert!(
+            p[3].1
+                .contains(&Step::Untag("photoflow|panorama proposal|".into()))
+        );
+        assert!(!p[2].1.iter().any(|s| matches!(s, Step::Untag(_))));
     }
 
     #[test]

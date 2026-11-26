@@ -1,4 +1,3 @@
-@wip
 Feature: US-12 — Panorama sets
   As the owner, I mark panorama sets in darktable, and the tool proposes sets I may have missed.
 
@@ -8,6 +7,7 @@ Feature: US-12 — Panorama sets
   confirm it (US-13). Exposure brackets taken for a panorama simply belong to its set. The actions
   below are buttons in the to-do panel (US-14).
 
+  @darktable-app
   Rule: I mark panorama sets by hand
 
     Scenario: Marking the selected photos as a set
@@ -15,6 +15,7 @@ Feature: US-12 — Panorama sets
       When I select them and mark them as a panorama set
       Then all three carry the set tag named after the first of them
 
+  @darktable
   Rule: The tool proposes photos taken in quick succession as a set
 
     Scenario Outline: <situation>
@@ -40,6 +41,7 @@ Feature: US-12 — Panorama sets
       When the photos are processed
       Then the tool proposes no set for its photos
 
+  @darktable-app
   Rule: I confirm, correct or reject a proposal
 
     Scenario: Choosing a proposal selects its photos

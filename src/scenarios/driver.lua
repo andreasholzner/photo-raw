@@ -106,6 +106,44 @@ function commands.process(...)
   return ""
 end
 
+-- US-12: selection and photoflow's panorama actions
+function commands.select(...)
+  local images = {}
+  for _, path in ipairs({ ... }) do images[#images + 1] = image(path) end
+  photoflow.show_and_select(images); dt.control.sleep(500)
+  return ""
+end
+
+function commands.selection()
+  local out = {}
+  for _, img in ipairs(dt.gui.selection()) do out[#out + 1] = img.path .. "/" .. img.filename end
+  return table.concat(out, "\31")
+end
+
+local function sel()
+  local out = {}
+  for _, img in ipairs(dt.gui.selection()) do out[#out + 1] = img end
+  return out
+end
+
+function commands.pano(action)
+  if action == "mark" then photoflow.mark_set(sel())
+  elseif action == "next" then return photoflow.select_next_proposal() or ""
+  elseif action:sub(1, 7) == "choose:" then
+    if not photoflow.select_proposal(action:sub(8)) then error("no proposal " .. action:sub(8)) end
+  elseif action == "confirm" then photoflow.confirm_set(sel())
+  elseif action == "reject" then photoflow.reject_set(sel())
+  else error("unknown panorama action " .. action) end
+  dt.control.sleep(500)
+  return ""
+end
+
+function commands.tags_of(path)
+  local out = {}
+  for _, t in ipairs(image(path):get_tags()) do out[#out + 1] = t.name end
+  return table.concat(out, "\31")
+end
+
 local PROCESSED = { "photoflow|class|", "photoflow|open|", "photoflow|left alone|" }
 
 function commands.processed()

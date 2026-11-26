@@ -157,13 +157,10 @@ pub fn scenarios(cfg: &Config, only: Option<&str>) -> Result<bool> {
         count(Selection::DarktableCli, only),
         count(Selection::Darktable, only),
     );
-    if only.is_some() {
-        println!(
-            "--only {:?}: {n_cli} darktable-cli and {n_app} darktable scenarios",
-            only.unwrap()
-        );
+    if let Some(o) = only {
+        println!("--only {o:?}: {n_cli} darktable-cli and {n_app} darktable scenarios");
         if n_cli + n_app == 0 {
-            bail!("no scenario matches {:?}", only.unwrap());
+            bail!("no scenario matches {o:?}");
         }
     }
 

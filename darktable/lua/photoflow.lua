@@ -92,6 +92,10 @@ local function apply_plan(text, by_path)
       img:apply_sidecar(arg)
     elseif img and action == "tag" then
       img:attach_tag(dt.tags.create(arg))
+    elseif img and action == "untag" then
+      for _, t in ipairs(img:get_tags()) do
+        if has_prefix(t.name, arg) then img:detach_tag(t) end
+      end
     end
   end
 end
@@ -153,6 +157,130 @@ function M.process(images)
     M.busy = false
   end)
 end
+
+-- Panorama sets (US-12): a set is a tag named after its first photo; proposals come from the tool.
+local SET = "photoflow|panorama|"
+local PROPOSAL = "photoflow|panorama proposal|"
+local REJECTED = "photoflow|not a panorama"
+local PANO_OPEN = "photoflow|open|panorama sets to confirm"
+
+local function detach_prefix(img, prefix)
+  for _, t in ipairs(img:get_tags()) do
+    if has_prefix(t.name, prefix) then img:detach_tag(t) end
+  end
+end
+
+local function proposal_of(img)
+  for _, t in ipairs(img:get_tags()) do
+    if has_prefix(t.name, PROPOSAL) then return t.name end
+  end
+end
+
+local function first_name(images)
+  local first
+  for _, img in ipairs(images) do
+    local key = (img.exif_datetime_taken or "") .. "\t" .. img.filename
+    if not first or key < first.key then first = { key = key, img = img } end
+  end
+  return first and first.img.filename:gsub("%.[^.]*$", "")
+end
+
+local function retire_proposal(img)
+  detach_prefix(img, PROPOSAL); detach_prefix(img, PANO_OPEN)
+end
+
+--- Marks `images` as one panorama set.
+function M.mark_set(images)
+  if #images == 0 then return end
+  local tag = dt.tags.create(SET .. first_name(images))
+  for _, img in ipairs(images) do
+    retire_proposal(img); detach_prefix(img, REJECTED); img:attach_tag(tag)
+  end
+end
+
+local function proposals()
+  local groups, names = {}, {}
+  for _, img in ipairs(dt.database) do
+    local p = proposal_of(img)
+    if p then
+      if not groups[p] then groups[p] = {}; names[#names + 1] = p end
+      table.insert(groups[p], img)
+    end
+  end
+  table.sort(names)
+  return groups, names
+end
+
+--- Shows the folder of `images` in the lighttable and selects them (darktable selects only photos
+--- of the current collection).
+function M.show_and_select(images)
+  if #images == 0 then return end
+  local rule = dt.gui.libs.collect.new_rule()
+  rule.mode = "DT_LIB_COLLECT_MODE_AND"; rule.item = "DT_COLLECTION_PROP_FILMROLL"; rule.data = images[1].path
+  dt.gui.libs.collect.filter({ rule })
+  dt.control.sleep(500)
+  dt.gui.selection(images)
+end
+
+--- Selects the photos of the proposed set `name` (its tag); returns whether there was one.
+function M.select_proposal(name)
+  local groups = proposals()
+  if not groups[name] then return false end
+  M.show_and_select(groups[name])
+  return true
+end
+
+local last_proposal = nil
+--- Selects the photos of the next proposed set; returns its tag, or nil when there is none.
+function M.select_next_proposal()
+  local _, names = proposals()
+  if #names == 0 then return nil end
+  local pick = names[1]
+  for _, n in ipairs(names) do
+    if last_proposal and n > last_proposal then pick = n; break end
+  end
+  last_proposal = pick
+  M.select_proposal(pick)
+  return pick
+end
+
+--- Confirms the proposal the selected photos come from: the selection becomes the set.
+function M.confirm_set(images)
+  if #images == 0 then return end
+  local p
+  for _, img in ipairs(images) do p = p or proposal_of(img) end
+  if p then
+    local groups = proposals()
+    for _, img in ipairs(groups[p] or {}) do retire_proposal(img) end
+  end
+  M.mark_set(images)
+end
+
+--- Rejects the proposal the selected photos come from: none of its photos is proposed again.
+function M.reject_set(images)
+  local groups = proposals()
+  for _, img in ipairs(images) do
+    local p = proposal_of(img)
+    for _, other in ipairs(p and groups[p] or { img }) do
+      retire_proposal(other); other:attach_tag(dt.tags.create(REJECTED))
+    end
+  end
+end
+
+local function selected()
+  local out = {}
+  for _, img in ipairs(dt.gui.selection()) do out[#out + 1] = img end
+  return out
+end
+
+dt.register_event(MODULE .. "_pano_mark", "shortcut", function() M.mark_set(selected()) end,
+  "photoflow: mark selection as panorama set")
+dt.register_event(MODULE .. "_pano_next", "shortcut", function() M.select_next_proposal() end,
+  "photoflow: select next proposed panorama set")
+dt.register_event(MODULE .. "_pano_confirm", "shortcut", function() M.confirm_set(selected()) end,
+  "photoflow: confirm panorama set")
+dt.register_event(MODULE .. "_pano_reject", "shortcut", function() M.reject_set(selected()) end,
+  "photoflow: not a panorama")
 
 local imported = {}
 dt.register_event(MODULE, "post-import-image", function(_, img)

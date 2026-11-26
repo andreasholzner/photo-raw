@@ -273,7 +273,8 @@ impl App {
             .to_string_lossy();
         let mut photos = Vec::new();
         for i in 1..=n {
-            let photo = dir.join(format!("{i}{name}"));
+            // unique across folders: panorama sets are named after their first photo (US-12)
+            let photo = dir.join(format!("{}-{i}{name}", self.photos));
             std::fs::copy(&self.raw, &photo)?;
             photos.push(photo);
         }
@@ -515,6 +516,39 @@ impl Driver for App {
             .split('\u{1f}')
             .filter(|p| !p.is_empty())
             .map(PathBuf::from)
+            .collect())
+    }
+
+    fn select(&mut self, photos: &[PathBuf]) -> Result<()> {
+        self.lighttable()?;
+        let paths: Vec<String> = photos.iter().map(|p| p.to_string_lossy().into()).collect();
+        let mut args = vec!["select"];
+        args.extend(paths.iter().map(String::as_str));
+        self.call(&args)?;
+        Ok(())
+    }
+
+    fn selection(&mut self) -> Result<Vec<PathBuf>> {
+        Ok(self
+            .call(&["selection"])?
+            .split('\u{1f}')
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
+            .collect())
+    }
+
+    fn pano(&mut self, action: &str) -> Result<()> {
+        self.lighttable()?;
+        self.call(&["pano", action])?;
+        Ok(())
+    }
+
+    fn tags_of(&mut self, photo: &Path) -> Result<Vec<String>> {
+        Ok(self
+            .call(&["tags_of", &photo.to_string_lossy()])?
+            .split('\u{1f}')
+            .filter(|t| !t.is_empty())
+            .map(String::from)
             .collect())
     }
 

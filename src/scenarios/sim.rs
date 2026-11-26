@@ -209,6 +209,7 @@ pub struct Sim {
     folders: usize,
     /// Edits the tool handed over (as XMP text), by photo: they replace the photo's sidecar.
     edits: std::collections::HashMap<PathBuf, String>,
+    selected: Vec<PathBuf>,
 }
 
 /// The tools of a simulated run: every photo is a day photo, renders aren't simulated (the
@@ -248,6 +249,18 @@ impl process::Tools for SimTools {
     }
     fn edits_blocked(&mut self) -> Result<Option<String>> {
         Ok(None)
+    }
+    /// Photos of one simulated folder are taken 2 s apart at 16 mm: a panorama proposal.
+    fn capture(&mut self, p: &process::Photo) -> Result<crate::exif::Capture> {
+        let n = |s: Option<&std::ffi::OsStr>| -> f64 {
+            s.and_then(|x| x.to_string_lossy().trim_end_matches(".ARW").parse().ok())
+                .unwrap_or(0.0)
+        };
+        let folder = n(p.raw.parent().and_then(|d| d.file_name()));
+        Ok(crate::exif::Capture {
+            time: folder * 10_000.0 + n(p.raw.file_name()) * 2.0,
+            focal_mm: Some(16.0),
+        })
     }
 }
 
@@ -306,7 +319,12 @@ impl Sim {
                         photo.library.is_altered = true;
                         self.edits.insert(raw.clone(), tools.written[&path].clone());
                     }
-                    Step::Tag(t) => tags.push(t),
+                    Step::Tag(t) => {
+                        if !tags.contains(&t) {
+                            tags.push(t)
+                        }
+                    }
+                    Step::Untag(prefix) => tags.retain(|t| !t.starts_with(&prefix)),
                 }
             }
         }
@@ -413,6 +431,52 @@ impl Driver for Sim {
             })
             .map(|(r, _)| r.clone())
             .collect())
+    }
+
+    fn select(&mut self, photos: &[PathBuf]) -> Result<()> {
+        self.selected = photos.to_vec();
+        Ok(())
+    }
+
+    fn selection(&mut self) -> Result<Vec<PathBuf>> {
+        Ok(self.selected.clone())
+    }
+
+    /// Marking a set, as photoflow's script does; the other actions only against darktable.
+    fn pano(&mut self, action: &str) -> Result<()> {
+        anyhow::ensure!(action == "mark", "not simulated: {action}");
+        let mut names: Vec<String> = self
+            .selected
+            .iter()
+            .map(|p| p.file_stem().unwrap().to_string_lossy().to_string())
+            .collect();
+        names.sort();
+        let tag = format!("{}{}", crate::panorama::SET_TAG, names[0]);
+        for raw in self.selected.clone() {
+            let tags = &mut self
+                .library
+                .iter_mut()
+                .find(|(r, _)| *r == raw)
+                .context("no such photo")?
+                .1
+                .library
+                .tags;
+            tags.retain(|t| !t.starts_with(crate::panorama::PROPOSAL_TAG));
+            tags.push(tag.clone());
+        }
+        Ok(())
+    }
+
+    fn tags_of(&mut self, photo: &std::path::Path) -> Result<Vec<String>> {
+        Ok(self
+            .library
+            .iter()
+            .find(|(r, _)| r == photo)
+            .context("no such photo")?
+            .1
+            .library
+            .tags
+            .clone())
     }
 
     fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>> {
