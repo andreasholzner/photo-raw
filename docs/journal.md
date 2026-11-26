@@ -1133,3 +1133,28 @@ luminance / median of the 15×15 px around it; star colour = R/G, B/G of the 3×
   shadow-contrast difference, not detail.
 - The WB solved on the sky background leaves the stars greenish (high G; _DSC4743 R/G 0.80).
   CA correction and the warmer WB move the stars only a little.
+
+### 2026-11-26 — US-21, round 3: neutral stars and a darker black level
+
+On R1 (AgX, raw CA, luma 0.7): T0 = R1 (sky-matched WB); T1 WB solved so that the stars average
+neutral (R/G = B/G = 1, the usual star colour calibration in astro processing); T2 = T1 plus the
+exposure module's black level correction, solved so that the star punch reaches the owner's edit,
+WB re-solved for neutral stars afterwards; T3 = T2 + diffuse "local contrast | fine". Star
+measures at 1500 px (`experiments/us21_stars.py`, patch 80 % wide, 5–50 % from the top). Sheets
+`photo-edits/_us21/round3/sheet_<photo>.png` (columns A, T0–T3).
+
+| photo | punch A | T0 | T1 | T2 | T3 | stars R/G, B/G: A | T0 | T2 | black |
+|---|---|---|---|---|---|---|---|---|---|
+| DSC00461 | 8.0 | 3.7 | 3.8 | 8.2 | 11.7 | 0.91, 0.85 | 1.00, 0.67 | 1.00, 1.03 | 0.0091 |
+| _DSC0905 | 7.0 | 4.2 | 4.2 | 6.7 | 8.0 | 0.96, 1.08 | 0.94, 0.96 | 0.98, 0.98 | 0.0054 |
+| _DSC0909 | 9.2 | 4.4 | 4.3 | 8.4 | 11.2 | 0.93, 1.30 | 0.89, 1.11 | 0.98, 1.00 | 0.0059 |
+| _DSC0914 | 5.8 | 3.9 | 3.9 | 5.7 | 6.2 | 0.97, 1.11 | 0.92, 1.14 | 0.98, 0.99 | 0.0035 |
+| _DSC0926 | 7.8 | 5.0 | 5.2 | 7.1 | 8.0 | 1.02, 0.93 | 1.00, 0.66 | 0.99, 0.99 | 0.0012 |
+| _DSC4743 | 5.1 | 3.5 | 3.4 | 5.1 | 5.1 | 0.93, 1.44 | 0.68, 1.06 | 0.99, 1.00 | 0.0016 |
+
+- The black level brings the punch to the owner's level on every photo (T2); fine local contrast
+  (T3) adds more punch but also a busier, grainier sky.
+- Neutral stars move the sky away from the owner's blue: brownish (T1) to violet (T2). The
+  owner's stars themselves are slightly blue (B/G 0.85–1.44).
+- The black level also darkens the frame's corners (lens vignetting) almost to black on
+  _DSC0909; the moonlit foreground of _DSC4743 is still too bright — the foreground is next.
