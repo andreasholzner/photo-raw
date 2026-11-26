@@ -319,8 +319,10 @@ act on it there.
 
 **Acceptance criteria:** A side panel lists the open steps (day/night unclear, sky colour,
 panorama sets, gradient proposals, culling, deletions, export). Clicking a step shows the
-affected photos; actions are buttons. A folder without open steps shows as done. Processing
-starts automatically after an import (can be switched off).
+affected photos; actions are buttons. For the selected photos, buttons switch the day look (AgX /
+sigmoid) and dehaze (on / off) and start the tool on them again — the same tags the owner can
+also set by hand (US-9). A folder without open steps shows as done. Processing starts
+automatically after an import (can be switched off).
 
 **Decisions:** US-14 → ADR-0001, ADR-0002
 
