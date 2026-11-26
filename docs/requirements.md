@@ -243,8 +243,12 @@ chosen, the tool redoes the edits and removes its comparison duplicates nobody c
 The self-test checks the tool's edits of the reference set's aurora photos like the day edits, and
 the upgrade block of US-9 applies.
 
-**Notes:** On very dark foregrounds (village lights, mountains) the foreground correction made no
-measurable difference (journal 2026-11-25, round 3).
+**Notes:** Sky targets (journal 2026-11-26): sky median 0.24, or 0.14 where the scene's foreground is
+at least 0.6 × as bright as its sky (measured on the aurora check render); sky background
+neutral blue R/G 0.95, B/G 1.35, blue-violet 1.05, 1.50. Against the owner's own edits the rule is
+off by a median 0.4 EV (the owner's style changed between years); the owner adjusts single photos
+with the exposure slider. On very dark foregrounds (village lights, mountains) the foreground
+correction made no measurable difference (journal 2026-11-25, round 3).
 
 **Decisions:** US-10 → ADR-0003, ADR-0004
 
