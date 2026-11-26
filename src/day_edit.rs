@@ -14,6 +14,11 @@ use anyhow::{Context, Result, bail};
 
 /// The modules the day edit adds, as darktable's built-in presets (darktable 5.6.1).
 pub const MODULES_XMP: &str = include_str!("../data/day-modules.xmp");
+/// A history with nothing in it: darktable's defaults only (the self-test's base, US-9).
+pub const EMPTY_HISTORY: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description xmlns:darktable="http://darktable.sf.net/" darktable:history_end="0"/>
+</rdf:RDF></x:xmpmeta>"#;
 /// Longest edge of the renders the exposure is solved on; the targets depend on it (US-6).
 pub const RENDER_SIZE: u32 = 500;
 /// AgX: the brightest 10 % at this luminance (US-6).

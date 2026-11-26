@@ -31,7 +31,8 @@ Run it after every darktable upgrade, and after changes to presets or styles. It
 things:
 
 - **Rendering:** darktable still renders a fixed set of your edited photos
-  ([data/reference-set.toml](data/reference-set.toml)) as before.
+  ([data/reference-set.toml](data/reference-set.toml)) as before — and the tool's own day edit of
+  each day photo of the set (`tool-*.png`) as before.
 - **darktable's behaviour:** the scenarios tagged `@darktable-cli` and `@darktable` in
   [features/](features/) — the things photoflow relies on, such as recognising aurora on a
   render, recognising its own edits and leaving yours alone.

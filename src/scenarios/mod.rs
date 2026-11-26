@@ -71,6 +71,8 @@ pub trait Driver: Send {
     /// Every photo in the library the tool has processed (it carries the tool's class, open-step
     /// or report tags).
     fn processed(&mut self) -> Result<Vec<PathBuf>>;
+    /// Fingerprints of the photos' edits (their sidecars, as darktable writes them) and their tags.
+    fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>>;
 
     // US-9: on the photo under test (only against the darktable application)
     /// A freshly imported copy of a photo of the reference set.
@@ -113,6 +115,8 @@ pub struct ScenarioWorld {
     edit_before: Option<String>,
     upgrade: (Option<String>, Option<String>),
     blocked: Option<&'static str>,
+    /// US-8: the folder's edits (fingerprint, sorted tags) before the second run.
+    edits_before: Vec<(String, Vec<String>)>,
     driver: Arc<Mutex<dyn Driver>>,
 }
 
@@ -140,6 +144,7 @@ impl ScenarioWorld {
             edit_before: None,
             upgrade: (None, None),
             blocked: None,
+            edits_before: Vec::new(),
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -717,6 +722,31 @@ fn processes_these(w: &mut ScenarioWorld) {
 #[then("the tool processes only the two selected photos")]
 fn processes_two(w: &mut ScenarioWorld) {
     assert_processed_exactly(w);
+}
+
+#[given("the tool has processed a folder")]
+fn processed_folder(w: &mut ScenarioWorld) {
+    w.folder = w.with("import a folder", |d| d.import_new_folder(2));
+    let folder = w.folder.clone();
+    w.edits_before = w.with("read the edits", |d| d.edits(&folder));
+}
+
+#[when("I start the tool on the same folder again")]
+fn again(w: &mut ScenarioWorld) {
+    let folder = w.folder.clone();
+    w.with("start the tool", |d| d.start_tool_on(&folder));
+}
+
+#[then("no photo's edit changes")]
+fn nothing_changed(w: &mut ScenarioWorld) {
+    let folder = w.folder.clone();
+    let now = w.with("read the edits", |d| d.edits(&folder));
+    assert!(
+        w.edits_before.iter().all(|(fp, _)| !fp.is_empty()),
+        "the folder wasn't edited: {:?}",
+        w.edits_before
+    );
+    assert_eq!(now, w.edits_before, "edits or tags changed");
 }
 
 #[then("the tool may edit it")]

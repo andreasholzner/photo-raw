@@ -38,6 +38,11 @@ impl Dirs {
     }
 }
 
+/// The render of the tool's day edit of a reference photo (US-9).
+fn tool_png_name(p: &RefPhoto) -> String {
+    format!("tool-{}", png_name(p))
+}
+
 fn png_name(p: &RefPhoto) -> String {
     format!("{}-{}.png", p.year, p.file)
 }
@@ -79,16 +84,26 @@ fn run_renders(cfg: &Config) -> Result<bool> {
     let current_meta = read_meta(&dirs.current)?;
 
     let set = reference_set::load()?;
-    let width = set.iter().map(|p| png_name(p).len()).max().unwrap_or(10);
+    // the owner's edits, then the tool's day edits where there is one to compare
+    let mut checks: Vec<(String, String)> = set
+        .iter()
+        .map(|p| (png_name(p), p.reason.clone()))
+        .collect();
+    for p in &set {
+        let name = tool_png_name(p);
+        if dirs.reference.join(&name).is_file() || dirs.current.join(&name).is_file() {
+            checks.push((name, "the tool's day edit (US-9)".into()));
+        }
+    }
+    let width = checks.iter().map(|(n, _)| n.len()).max().unwrap_or(10);
     println!();
     println!(
         "{:<width$}  {:>6}  {:>4}  {:>4}  result",
         "photo", "mean", "p99", "max"
     );
     let mut failed = 0;
-    for p in &set {
-        let name = png_name(p);
-        let (diff, verdict) = compare(cfg, &dirs.reference.join(&name), &dirs.current.join(&name));
+    for (name, reason) in &checks {
+        let (diff, verdict) = compare(cfg, &dirs.reference.join(name), &dirs.current.join(name));
         let numbers = match diff {
             Some(d) => format!("{:>6.2}  {:>4}  {:>4}", d.mean, d.p99, d.max),
             None => format!("{:>6}  {:>4}  {:>4}", "-", "-", "-"),
@@ -97,7 +112,7 @@ fn run_renders(cfg: &Config) -> Result<bool> {
             println!("{name:<width$}  {numbers}  ok");
         } else {
             failed += 1;
-            println!("{name:<width$}  {numbers}  {verdict} ({})", p.reason);
+            println!("{name:<width$}  {numbers}  {verdict} ({reason})");
         }
     }
     println!();
@@ -109,15 +124,15 @@ fn run_renders(cfg: &Config) -> Result<bool> {
     }
     if failed == 0 && rendered_all {
         println!(
-            "All {} photos match the reference ({}).",
-            set.len(),
+            "All {} renders match the reference ({}).",
+            checks.len(),
             current_meta.darktable
         );
         Ok(true)
     } else {
         println!(
-            "{failed} of {} photos differ from the reference.",
-            set.len()
+            "{failed} of {} renders differ from the reference.",
+            checks.len()
         );
         println!(
             "Compare the PNGs in {} and {}.",
@@ -276,6 +291,10 @@ fn render_set(cfg: &Config, dirs: &Dirs) -> Result<bool> {
     std::fs::create_dir_all(&dirs.current)?;
     println!("Rendering {} photos with {version} …", jobs.len());
 
+    let sources: Vec<(RefPhoto, PathBuf)> = jobs
+        .iter()
+        .map(|(p, s, _)| (p.clone(), s.clone()))
+        .collect();
     let queue = Mutex::new(jobs.into_iter());
     let done = AtomicUsize::new(0);
     let failures = Mutex::new(Vec::new());
@@ -301,6 +320,43 @@ fn render_set(cfg: &Config, dirs: &Dirs) -> Result<bool> {
             });
         }
     });
+    // US-9: the tool's day edit of every day photo, on darktable's defaults (the photos' import
+    // histories are gone), with the exposure solved as in a real run
+    let day: Vec<(RefPhoto, PathBuf)> = sources
+        .into_iter()
+        .filter(|(_, s)| {
+            crate::exif::read(s)
+                .map(|e| crate::scene::classify(&e) == crate::scene::Scene::Day)
+                .unwrap_or(false)
+        })
+        .collect();
+    println!("Rendering the tool's day edit of {} photos …", day.len());
+    let queue = Mutex::new(day.into_iter());
+    let done = AtomicUsize::new(0);
+    let total = queue.lock().unwrap().len();
+    std::thread::scope(|s| {
+        for _ in 0..cfg.selftest.jobs {
+            s.spawn(|| {
+                loop {
+                    let Some((p, source)) = queue.lock().unwrap().next() else {
+                        break;
+                    };
+                    let out = dirs.current.join(tool_png_name(&p));
+                    let result =
+                        tool_day_edit(&dt, &source, &dirs.work.join("tool"), &png_name(&p))
+                            .and_then(|xmp| dt.render(&source, &xmp, &out, cfg.selftest.size));
+                    let n = done.fetch_add(1, Ordering::SeqCst) + 1;
+                    match result {
+                        Ok(()) => println!("  [{n:>2}/{total}] {} (tool)", p.file),
+                        Err(e) => {
+                            println!("  [{n:>2}/{total}] {} (tool) FAILED", p.file);
+                            failures.lock().unwrap().push(format!("{e:#}"));
+                        }
+                    }
+                }
+            });
+        }
+    });
     let failures = failures.into_inner().unwrap();
     for f in &failures {
         eprintln!("  {f}");
@@ -314,6 +370,25 @@ fn render_set(cfg: &Config, dirs: &Dirs) -> Result<bool> {
     };
     std::fs::write(dirs.current.join("meta.toml"), toml::to_string(&meta)?)?;
     Ok(failures.is_empty())
+}
+
+/// The tool's day edit of `source` on darktable's defaults; returns the edit's sidecar.
+fn tool_day_edit(dt: &Darktable, source: &Path, work: &Path, name: &str) -> Result<PathBuf> {
+    use crate::day_edit::{self, Look, Wanted};
+    std::fs::create_dir_all(work)?;
+    let xmp = work.join(format!("{name}.xmp"));
+    let probe = work.join(format!("{name}.pfm"));
+    let wanted = Wanted {
+        look: Look::Agx,
+        dehaze: false,
+    };
+    let solved = day_edit::solve(day_edit::EMPTY_HISTORY, wanted, |text| {
+        std::fs::write(&xmp, text)?;
+        dt.render(source, &xmp, &probe, day_edit::RENDER_SIZE)?;
+        crate::aurora::load_pfm(&probe)
+    })?;
+    std::fs::write(&xmp, &solved.xmp)?;
+    Ok(xmp)
 }
 
 fn promote(dirs: &Dirs) -> Result<()> {

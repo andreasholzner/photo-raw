@@ -415,6 +415,30 @@ impl Driver for Sim {
             .collect())
     }
 
+    fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>> {
+        photos
+            .iter()
+            .map(|raw| {
+                let p = &self
+                    .library
+                    .iter()
+                    .find(|(r, _)| r == raw)
+                    .context("no such photo")?
+                    .1;
+                let text =
+                    self.edits.get(raw).cloned().unwrap_or_else(|| {
+                        p.sidecar.as_ref().map(Sidecar::xmp).unwrap_or_default()
+                    });
+                let fp = sidecar::parse(&text)?.fingerprint();
+                let mut tags = p.library.tags.clone();
+                tags.sort();
+                // an unedited photo has no fingerprint of the tool's edit
+                let own = self.edits.contains_key(raw);
+                Ok((if own { fp } else { String::new() }, tags))
+            })
+            .collect()
+    }
+
     // US-9 runs only against the darktable application (@darktable-app)
     fn unedited_from(&mut self, _: &str, _: u16) -> Result<()> {
         anyhow::bail!("not simulated")

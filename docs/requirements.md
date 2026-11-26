@@ -40,7 +40,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
-| 5    | US-8 – US-10, US-21         | The tool's core: safety, day, aurora and night edits                           |
+| 5    | US-10, US-21                | The tool's core: aurora and night edits                                        |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
 
@@ -59,8 +59,8 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-5](#us-5--print-sharpening-in-the-export)                   | ✅     | Print sharpening in the export                 | [Foundation](#foundation)                       |
 | [US-6](#us-6--more-analysis-on-edited-photos)                   | ✅     | More analysis on edited photos                 | [Foundation](#foundation)                       |
 | [US-7](#us-7--classify-day-night-and-aurora)                    | ✅     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
-| [US-8](#us-8--only-touch-what-was-handed-over)                  | 🚧     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
-| [US-9](#us-9--day-auto-edit)                                    | 🚧     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
+| [US-8](#us-8--only-touch-what-was-handed-over)                  | ✅     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
+| [US-9](#us-9--day-auto-edit)                                    | ✅     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
 | [US-10](#us-10--aurora-auto-edit)                               | 📋     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
 | [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
 | [US-12](#us-12--panorama-sets)                                  | 📋     | Panorama sets                                  | [Panoramas](#panoramas)                         |
@@ -205,7 +205,7 @@ to be asked only where it is unclear.
 
 ### US-8 — Only touch what was handed over
 
-**In progress 🚧** — As the owner, I want the tool to leave alone everything it wasn't asked to
+**Done ✅** — As the owner, I want the tool to leave alone everything it wasn't asked to
 process and every edit I made by hand.
 
 **Acceptance criteria:** [us-08-only-touch-what-was-handed-over.feature](../features/us-08-only-touch-what-was-handed-over.feature)
@@ -214,7 +214,7 @@ process and every edit I made by hand.
 
 ### US-9 — Day auto-edit
 
-**In progress 🚧** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
+**Done ✅** — As the owner, I want day photos to get my base edit with a per-photo exposure, so
 I only correct outliers.
 
 **Acceptance criteria:** [us-09-day-auto-edit.feature](../features/us-09-day-auto-edit.feature).

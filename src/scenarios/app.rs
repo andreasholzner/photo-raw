@@ -518,6 +518,32 @@ impl Driver for App {
             .collect())
     }
 
+    fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>> {
+        self.lighttable()?;
+        let mut out = Vec::new();
+        for photo in photos {
+            let p = photo.to_string_lossy().to_string();
+            self.call(&["touch", &p])?;
+            settled_sidecar(photo);
+            let fp = sidecar::read(&sidecar_of(photo))?.fingerprint();
+            let state = self.call(&["state", &p])?;
+            let mut tags: Vec<String> = state
+                .splitn(3, '\t')
+                .nth(2)
+                .unwrap_or("")
+                .split('\u{1f}')
+                .filter(|t| !t.is_empty())
+                .map(String::from)
+                .collect();
+            tags.sort();
+            let own = tags
+                .iter()
+                .any(|t| t.starts_with(crate::edit_state::EDIT_TAG_PREFIX));
+            out.push((if own { fp } else { String::new() }, tags));
+        }
+        Ok(out)
+    }
+
     fn unedited_from(&mut self, file: &str, year: u16) -> Result<()> {
         let raw = locate(&self.photo_root, year, file)?;
         self.current = Some(self.import_copy(&raw)?);

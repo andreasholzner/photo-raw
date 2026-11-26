@@ -84,7 +84,7 @@ Feature: US-8 — Only touch what was handed over
       When I select two of them and start the tool
       Then the tool processes only the two selected photos
 
-  @wip
+  @darktable
   Rule: Running the tool again changes nothing that was already right
 
     Scenario: A second run on the same photos
