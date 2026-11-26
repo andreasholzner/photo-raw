@@ -68,6 +68,10 @@ pub struct App {
     photos: u32,
     current: Option<PathBuf>,
     in_darkroom: Option<PathBuf>,
+    photo_root: PathBuf,
+    /// darktable-cli for rendering the photo under test (US-9), prepared on first use.
+    cli: (String, PathBuf),
+    renderer: Option<crate::darktable::Darktable>,
 }
 
 fn sidecar_of(raw: &Path) -> PathBuf {
@@ -172,6 +176,9 @@ impl App {
             photos: 0,
             current: None,
             in_darkroom: None,
+            photo_root: cfg.photo_root.clone(),
+            cli: (cfg.darktable.cli.clone(), cfg.darktable_config_dir()?),
+            renderer: None,
         };
         app.wait_ready()?;
         app.call(&["import_style", &style.to_string_lossy()])?;
@@ -299,6 +306,18 @@ impl App {
             bail!("photoflow's darktable script: {error}");
         }
         Ok(())
+    }
+
+    /// Imports a fresh copy of `raw`, in its own folder.
+    fn import_copy(&mut self, raw: &Path) -> Result<PathBuf> {
+        self.lighttable()?;
+        self.photos += 1;
+        let dir = self.work.join("photos").join(self.photos.to_string());
+        std::fs::create_dir_all(&dir)?;
+        let photo = dir.join(raw.file_name().context("raw without name")?);
+        std::fs::copy(raw, &photo)?;
+        self.call(&["import", &dir.to_string_lossy()])?;
+        Ok(photo)
     }
 
     /// Imports a fresh copy of the test raw, in its own folder.
@@ -497,6 +516,76 @@ impl Driver for App {
             .filter(|p| !p.is_empty())
             .map(PathBuf::from)
             .collect())
+    }
+
+    fn unedited_from(&mut self, file: &str, year: u16) -> Result<()> {
+        let raw = locate(&self.photo_root, year, file)?;
+        self.current = Some(self.import_copy(&raw)?);
+        Ok(())
+    }
+
+    fn current_photo(&self) -> Result<PathBuf> {
+        self.current()
+    }
+
+    fn tag(&mut self, tag: &str) -> Result<()> {
+        let p = self.current()?.to_string_lossy().to_string();
+        self.call(&["tag", &p, tag])?;
+        Ok(())
+    }
+
+    fn untag(&mut self, prefix: &str) -> Result<()> {
+        let p = self.current()?.to_string_lossy().to_string();
+        self.call(&["untag", &p, prefix])?;
+        Ok(())
+    }
+
+    fn tags(&mut self) -> Result<Vec<String>> {
+        let p = self.current()?.to_string_lossy().to_string();
+        let state = self.call(&["state", &p])?;
+        Ok(state
+            .splitn(3, '\t')
+            .nth(2)
+            .unwrap_or("")
+            .split('\u{1f}')
+            .filter(|t| !t.is_empty())
+            .map(String::from)
+            .collect())
+    }
+
+    fn sidecar_text(&mut self) -> Result<String> {
+        let photo = self.current()?;
+        self.lighttable()?;
+        self.call(&["touch", &photo.to_string_lossy()])?;
+        settled_sidecar(&photo);
+        Ok(std::fs::read_to_string(sidecar_of(&photo))?)
+    }
+
+    fn render(&mut self, size: u32) -> Result<crate::aurora::Image> {
+        let photo = self.current()?;
+        let xmp_text = self.sidecar_text()?;
+        if self.renderer.is_none() {
+            self.renderer = Some(crate::darktable::Darktable::prepare(
+                &self.cli.0,
+                &self.cli.1,
+                &self.work.join("darktable-cli"),
+            )?);
+        }
+        let dir = self.work.join("renders");
+        std::fs::create_dir_all(&dir)?;
+        let name = photo
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let xmp = dir.join(format!("{}-{name}.xmp", self.photos));
+        let out = dir.join(format!("{}-{name}.pfm", self.photos));
+        std::fs::write(&xmp, xmp_text)?;
+        self.renderer
+            .as_ref()
+            .unwrap()
+            .render(&photo, &xmp, &out, size)?;
+        crate::aurora::load_pfm(&out)
     }
 }
 

@@ -411,4 +411,27 @@ impl Driver for Sim {
             .map(|(r, _)| r.clone())
             .collect())
     }
+
+    // US-9 runs only against the darktable application (@darktable-app)
+    fn unedited_from(&mut self, _: &str, _: u16) -> Result<()> {
+        anyhow::bail!("not simulated")
+    }
+    fn current_photo(&self) -> Result<PathBuf> {
+        anyhow::bail!("not simulated")
+    }
+    fn tag(&mut self, _: &str) -> Result<()> {
+        anyhow::bail!("not simulated")
+    }
+    fn untag(&mut self, _: &str) -> Result<()> {
+        anyhow::bail!("not simulated")
+    }
+    fn tags(&mut self) -> Result<Vec<String>> {
+        anyhow::bail!("not simulated")
+    }
+    fn sidecar_text(&mut self) -> Result<String> {
+        anyhow::bail!("not simulated")
+    }
+    fn render(&mut self, _: u32) -> Result<crate::aurora::Image> {
+        anyhow::bail!("not simulated")
+    }
 }

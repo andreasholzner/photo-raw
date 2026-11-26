@@ -313,6 +313,10 @@ impl Tools for RealTools<'_> {
     }
 
     fn edits_blocked(&mut self) -> Result<Option<String>> {
+        // the self-test's own darktable: the self-test is what lifts the block
+        if std::env::var_os("PHOTOFLOW_SELFTEST_IPC").is_some() {
+            return Ok(None);
+        }
         let installed = self.darktable()?.version()?;
         let accepted = crate::selftest::accepted_darktable(self.cfg)?;
         Ok(upgrade_block(accepted.as_deref(), &installed).map(str::to_string))

@@ -26,8 +26,16 @@ pub const SNOW_SHARE: f64 = 0.14;
 pub const LOOK_TAG: &str = "photoflow|look|";
 pub const DEHAZE_TAG: &str = "photoflow|dehaze|";
 const OWN: &str = "photoflow";
-/// Display transforms: the import's is replaced by the look.
-const DISPLAY: [&str; 5] = ["filmicrgb", "sigmoid", "agx", "basecurve", "filmic"];
+/// Switched off when darktable applied them on import: display transforms (the look replaces
+/// them) and sharpening (print sharpening comes with the export, US-5).
+const DISPLAY: [&str; 6] = [
+    "filmicrgb",
+    "sigmoid",
+    "agx",
+    "basecurve",
+    "filmic",
+    "sharpen",
+];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Look {

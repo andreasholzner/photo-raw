@@ -140,6 +140,14 @@ end
 
 function commands.tag(path, name) image(path):attach_tag(dt.tags.create(name)); return "" end
 
+function commands.untag(path, prefix)
+  local img = image(path)
+  for _, t in ipairs(img:get_tags()) do
+    if t.name:sub(1, #prefix) == prefix then img:detach_tag(t) end
+  end
+  return ""
+end
+
 function commands.import_style(file) dt.styles.import(file); return "" end
 
 function commands.apply_style(name, path)

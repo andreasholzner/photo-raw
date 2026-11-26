@@ -31,6 +31,10 @@ pub const FEATURES: &[(&str, &str)] = &[
         "us-08-only-touch-what-was-handed-over.feature",
         include_str!("../../features/us-08-only-touch-what-was-handed-over.feature"),
     ),
+    (
+        "us-09-day-auto-edit.feature",
+        include_str!("../../features/us-09-day-auto-edit.feature"),
+    ),
 ];
 
 /// A change the owner makes in the darkroom.
@@ -67,6 +71,19 @@ pub trait Driver: Send {
     /// Every photo in the library the tool has processed (it carries the tool's class, open-step
     /// or report tags).
     fn processed(&mut self) -> Result<Vec<PathBuf>>;
+
+    // US-9: on the photo under test (only against the darktable application)
+    /// A freshly imported copy of a photo of the reference set.
+    fn unedited_from(&mut self, file: &str, year: u16) -> Result<()>;
+    fn current_photo(&self) -> Result<PathBuf>;
+    fn tag(&mut self, tag: &str) -> Result<()>;
+    /// Detaches every tag starting with `prefix`.
+    fn untag(&mut self, prefix: &str) -> Result<()>;
+    fn tags(&mut self) -> Result<Vec<String>>;
+    /// The photo's sidecar, after darktable has written it.
+    fn sidecar_text(&mut self) -> Result<String>;
+    /// Renders the photo with its sidecar (darktable-cli), longest edge `size`.
+    fn render(&mut self, size: u32) -> Result<crate::aurora::Image>;
 }
 
 /// Which driver the next scenarios use.
@@ -90,6 +107,12 @@ pub struct ScenarioWorld {
     /// Photos of the scenario's folder, and those processed before the scenario's action.
     folder: Vec<PathBuf>,
     processed_before: Vec<PathBuf>,
+    /// US-9: the scenario works on the driver's photo under test.
+    on_driver: bool,
+    import_sidecar: Option<String>,
+    edit_before: Option<String>,
+    upgrade: (Option<String>, Option<String>),
+    blocked: Option<&'static str>,
     driver: Arc<Mutex<dyn Driver>>,
 }
 
@@ -112,6 +135,11 @@ impl ScenarioWorld {
             class: None,
             folder: Vec::new(),
             processed_before: Vec::new(),
+            on_driver: false,
+            import_sidecar: None,
+            edit_before: None,
+            upgrade: (None, None),
+            blocked: None,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -169,8 +197,12 @@ pub fn run(features: &Path, selection: Selection, driver: Option<Arc<Mutex<dyn D
                 .collect();
                 let has = |t: &str| all.iter().any(|tags| tagged(tags, t));
                 match selection {
-                    Selection::Simulated => !has("wip") && !has("darktable-cli"),
-                    Selection::Darktable => has("darktable") && !has("wip") && !has("manual"),
+                    Selection::Simulated => {
+                        !has("wip") && !has("darktable-cli") && !has("darktable-app")
+                    }
+                    Selection::Darktable => {
+                        (has("darktable") || has("darktable-app")) && !has("wip") && !has("manual")
+                    }
                     Selection::DarktableCli => {
                         has("darktable-cli") && !has("wip") && !has("manual")
                     }
@@ -317,6 +349,15 @@ fn night_without_aurora(w: &mut ScenarioWorld) {
 
 #[when("the photos are processed")]
 fn processed(w: &mut ScenarioWorld) {
+    if let (Some(accepted), Some(installed)) = w.upgrade.clone() {
+        w.blocked = crate::process::upgrade_block(Some(&accepted), &installed);
+        return;
+    }
+    if w.on_driver {
+        w.edit_before = Some(w.with("read the sidecar", |d| d.sidecar_text()));
+        start_tool(w);
+        return;
+    }
     let exposure = w.exposure.expect("a photo");
     let photo = w.photo.clone();
     let class = classify::classify(&exposure, || {
@@ -341,10 +382,233 @@ fn is_night_without_aurora(w: &mut ScenarioWorld) {
 
 #[then(expr = "the open step {string} lists the photo")]
 fn open_step_lists(w: &mut ScenarioWorld, name: String) {
+    if w.on_driver {
+        let tags = w.with("read the tags", |d| d.tags());
+        let tag = format!("{}{name}", crate::process::OPEN_TAG);
+        assert!(tags.contains(&tag), "no open step {name:?}: {tags:?}");
+        return;
+    }
     match w.class {
         Some(Class::Ask(q)) => assert_eq!(q.open_step(), name),
         other => panic!("no open step for the photo: {other:?}"),
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// US-9 — Day auto-edit (against the darktable application: real imports, renders)
+// ---------------------------------------------------------------------------------------------
+
+fn start_tool(w: &mut ScenarioWorld) {
+    let photo = w.with("the photo under test", |d| d.current_photo());
+    w.with("start the tool", |d| d.start_tool_on(&[photo]));
+}
+
+fn day_photo(w: &mut ScenarioWorld, from: Option<(&str, u16)>) {
+    w.on_driver = true;
+    match from {
+        None => w.with("import a photo", |d| d.unedited()),
+        Some((file, year)) => w.with("import a photo", |d| d.unedited_from(file, year)),
+    }
+    w.import_sidecar = Some(w.with("read the sidecar", |d| d.sidecar_text()));
+}
+
+/// The reference set's bright snow scene with clipped highlights.
+const SNOW: (&str, u16) = ("_DSC6299.ARW", 2023);
+
+#[given("an unedited day photo")]
+fn unedited_day(w: &mut ScenarioWorld) {
+    day_photo(w, None);
+}
+
+#[given("a day photo the tool has edited")]
+fn day_edited(w: &mut ScenarioWorld) {
+    day_photo(w, None);
+    start_tool(w);
+}
+
+#[given(expr = "a day photo the tool has edited {}")]
+fn day_edited_with(w: &mut ScenarioWorld, how: String) {
+    day_photo(w, None);
+    let tag = match how.as_str() {
+        "in sigmoid" => "photoflow|look|sigmoid",
+        "with dehaze" => "photoflow|dehaze|on",
+        other => panic!("unknown: {other}"),
+    };
+    w.with("tag", |d| d.tag(tag));
+    start_tool(w);
+}
+
+#[given("a day photo whose brightest parts are clipped")]
+fn day_clipped(w: &mut ScenarioWorld) {
+    day_photo(w, Some(SNOW));
+}
+
+#[given("an unedited day photo of a bright snow scene")]
+fn day_snow(w: &mut ScenarioWorld) {
+    day_photo(w, Some(SNOW));
+}
+
+#[given("a day photo of a bright snow scene the tool has edited")]
+fn day_snow_edited(w: &mut ScenarioWorld) {
+    day_photo(w, Some(SNOW));
+    start_tool(w);
+}
+
+#[given(expr = "a day photo tagged {string} and {string}")]
+fn day_tagged_two(w: &mut ScenarioWorld, a: String, b: String) {
+    day_photo(w, None);
+    w.with("tag", |d| d.tag(&a));
+    w.with("tag", |d| d.tag(&b));
+}
+
+#[when(expr = "I tag it {string} and start the tool on it")]
+fn tag_and_start(w: &mut ScenarioWorld, tag: String) {
+    w.with("tag", |d| d.tag(&tag));
+    start_tool(w);
+}
+
+#[when(expr = "I replace its tag with {string} and start the tool on it")]
+fn retag_and_start(w: &mut ScenarioWorld, tag: String) {
+    let group = &tag[..tag.rfind('|').expect("a tag like a|b|c") + 1];
+    w.with("untag", |d| d.untag(group));
+    w.with("tag", |d| d.tag(&tag));
+    start_tool(w);
+}
+
+fn edit(w: &mut ScenarioWorld) -> crate::sidecar::History {
+    let text = w.with("read the sidecar", |d| d.sidecar_text());
+    crate::sidecar::parse(&text).unwrap_or_else(|e| panic!("the sidecar: {e:#}"))
+}
+
+fn has_step(h: &crate::sidecar::History, op: &str, name: &str) -> bool {
+    h.steps
+        .iter()
+        .any(|s| s.operation == op && s.multi_name == name)
+}
+
+#[then(expr = "its edit has the look {string} and local contrast {string}")]
+fn edit_has_look(w: &mut ScenarioWorld, look: String, lc: String) {
+    let h = edit(w);
+    let (want, not) = match look.as_str() {
+        "AgX punchy" => (
+            vec![("agx", "photoflow AgX punchy")],
+            ("sigmoid", "photoflow sigmoid ACES"),
+        ),
+        "sigmoid ACES with vibrant colors" => (
+            vec![
+                ("sigmoid", "photoflow sigmoid ACES"),
+                ("colorbalancergb", "photoflow vibrant colors"),
+            ],
+            ("agx", "photoflow AgX punchy"),
+        ),
+        other => panic!("unknown look {other}"),
+    };
+    for (op, name) in want {
+        assert!(has_step(&h, op, name), "no {name}");
+    }
+    assert!(!has_step(&h, not.0, not.1), "still {}", not.1);
+    assert_eq!(lc, "clarity");
+    assert!(has_step(&h, "bilat", "photoflow clarity"), "no clarity");
+}
+
+#[then(expr = "its brightest {int} % sit at {float} in the edit's rendering")]
+fn brightest_at(w: &mut ScenarioWorld, pct: u32, target: f64) {
+    let img = w.with("render the edit", |d| {
+        d.render(crate::day_edit::RENDER_SIZE)
+    });
+    let got = crate::day_edit::stats(&img, 1.0 - f64::from(pct) / 100.0).percentile;
+    assert!(
+        (got.log2() - target.log2()).abs() <= 0.1,
+        "brightest {pct} % at {got:.3}, expected {target}"
+    );
+}
+
+#[then("its edit contains no sharpening")]
+fn no_sharpening(w: &mut ScenarioWorld) {
+    let h = edit(w);
+    assert!(
+        !h.steps.iter().any(|s| s.operation == "sharpen"),
+        "sharpening in the edit"
+    );
+}
+
+#[then("every step darktable applied on import is still in its edit")]
+fn import_kept(w: &mut ScenarioWorld) {
+    let import =
+        crate::sidecar::parse(w.import_sidecar.as_ref().expect("an imported photo")).unwrap();
+    let h = edit(w);
+    // the display transform, the exposure and sharpening are what the tool replaces
+    let replaced = [
+        "filmicrgb",
+        "sigmoid",
+        "agx",
+        "basecurve",
+        "filmic",
+        "sharpen",
+        "exposure",
+    ];
+    for s in import
+        .steps
+        .iter()
+        .filter(|s| !replaced.contains(&s.operation.as_str()))
+    {
+        assert!(
+            h.steps.contains(s),
+            "{} ({}) from the import is gone",
+            s.operation,
+            s.multi_name
+        );
+    }
+}
+
+#[then(expr = "its edit also has diffuse or sharpen {string}")]
+fn has_dehaze(w: &mut ScenarioWorld, preset: String) {
+    assert_eq!(preset, "dehaze");
+    assert!(
+        has_step(&edit(w), "diffuse", "photoflow dehaze"),
+        "no dehaze"
+    );
+}
+
+#[then(expr = "its edit has no diffuse or sharpen {string}")]
+fn no_dehaze(w: &mut ScenarioWorld, preset: String) {
+    assert_eq!(preset, "dehaze");
+    assert!(
+        !has_step(&edit(w), "diffuse", "photoflow dehaze"),
+        "dehaze still in the edit"
+    );
+}
+
+#[then(expr = "the open step {string} doesn't list the photo")]
+fn open_step_absent(w: &mut ScenarioWorld, name: String) {
+    let tags = w.with("read the tags", |d| d.tags());
+    let tag = format!("{}{name}", crate::process::OPEN_TAG);
+    assert!(!tags.contains(&tag), "open step {name:?} is there");
+}
+
+#[then("the tool leaves its edit as it was")]
+fn edit_unchanged(w: &mut ScenarioWorld) {
+    let before = crate::sidecar::parse(w.edit_before.as_ref().expect("processed")).unwrap();
+    assert_eq!(
+        edit(w).fingerprint(),
+        before.fingerprint(),
+        "the edit changed"
+    );
+}
+
+#[given(expr = "the self-test was last accepted with darktable {word}")]
+fn accepted_with(w: &mut ScenarioWorld, version: String) {
+    w.upgrade.0 = Some(format!("darktable {version}"));
+}
+
+#[given(expr = "darktable {word} is installed")]
+fn installed(w: &mut ScenarioWorld, version: String) {
+    w.upgrade.1 = Some(format!("darktable {version}"));
+}
+
+#[then(expr = "the tool edits no photo and reports {string}")]
+fn edits_blocked(w: &mut ScenarioWorld, report: String) {
+    assert_eq!(w.blocked, Some(report.as_str()));
 }
 
 // ---------------------------------------------------------------------------------------------

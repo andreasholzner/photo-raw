@@ -1,4 +1,3 @@
-@wip
 Feature: US-9 — Day auto-edit
   As the owner, I want day photos to get my base edit with a per-photo exposure, so I only
   correct outliers.
@@ -11,7 +10,7 @@ Feature: US-9 — Day auto-edit
   tool on it again; the tags stay, so my choices can later teach a look rule. Without a look tag
   the tool uses its default; a look tag is my choice and always wins.
 
-  @darktable-cli
+  @darktable-app
   Rule: A day photo gets the day look with its own exposure
 
     Scenario: The default look
@@ -26,7 +25,7 @@ Feature: US-9 — Day auto-edit
       When the photos are processed
       Then every step darktable applied on import is still in its edit
 
-  @darktable-cli
+  @darktable-app
   Rule: I switch the look and dehaze with tags
 
     Scenario: Switching to sigmoid
@@ -56,7 +55,7 @@ Feature: US-9 — Day auto-edit
       When I replace its tag with "photoflow|dehaze|off" and start the tool on it
       Then its edit has no diffuse or sharpen "dehaze"
 
-  @darktable-cli
+  @darktable-app
   Rule: Where a rule is uncertain, I am asked
 
     Scenario: The exposure target can't be reached
