@@ -49,6 +49,8 @@ fn end_leftover(work: &Path) {
 }
 
 const DRIVER_LUA: &str = include_str!("driver.lua");
+/// photoflow's own darktable script, loaded next to the driver.
+const PHOTOFLOW_LUA: &str = include_str!("../../darktable/lua/photoflow.lua");
 /// The style applied "by hand" in the lighttable.
 const STYLE_NAME: &str = "photoflow Druck v1";
 const STYLE_FILE: &str = include_str!("../../darktable/styles/photoflow Druck v1.dtstyle");
@@ -107,7 +109,11 @@ impl App {
             copy_dir(&owner.join("color"), &config.join("color"))?;
         }
         std::fs::write(config.join("lua/photoflow_selftest.lua"), DRIVER_LUA)?;
-        std::fs::write(config.join("luarc"), "require \"photoflow_selftest\"\n")?;
+        std::fs::write(config.join("lua/photoflow.lua"), PHOTOFLOW_LUA)?;
+        std::fs::write(
+            config.join("luarc"),
+            "require \"photoflow\"\nrequire \"photoflow_selftest\"\n",
+        )?;
         let style = work.join(format!("{STYLE_NAME}.dtstyle"));
         std::fs::write(&style, STYLE_FILE)?;
 
@@ -169,6 +175,17 @@ impl App {
         };
         app.wait_ready()?;
         app.call(&["import_style", &style.to_string_lossy()])?;
+        // photoflow's script runs this photoflow with this configuration; it processes imported
+        // photos only in the scenarios about that
+        let exe = std::env::current_exe()?;
+        let cfg_file = cfg
+            .source
+            .as_deref()
+            .map(Path::to_string_lossy)
+            .unwrap_or_default();
+        app.call(&["set_pref", "binary", "string", &exe.to_string_lossy()])?;
+        app.call(&["set_pref", "config", "string", &cfg_file])?;
+        app.call(&["set_pref", "after_import", "bool", "0"])?;
 
         // the tool's stand-in edit (until the tool writes its own, US-9): an exposure change made
         // in the darkroom, as darktable writes it
@@ -235,6 +252,53 @@ impl App {
             }
             std::thread::sleep(Duration::from_millis(100));
         }
+    }
+
+    /// A new folder with `n` copies of the test raw (not imported yet).
+    fn new_folder(&mut self, n: usize) -> Result<(PathBuf, Vec<PathBuf>)> {
+        self.photos += 1;
+        let dir = self.work.join("photos").join(self.photos.to_string());
+        std::fs::create_dir_all(&dir)?;
+        let name = self
+            .raw
+            .file_name()
+            .context("raw without name")?
+            .to_string_lossy();
+        let mut photos = Vec::new();
+        for i in 1..=n {
+            let photo = dir.join(format!("{i}{name}"));
+            std::fs::copy(&self.raw, &photo)?;
+            photos.push(photo);
+        }
+        Ok((dir, photos))
+    }
+
+    fn import_folder(&mut self, n: usize, process: bool) -> Result<Vec<PathBuf>> {
+        self.lighttable()?;
+        let (dir, photos) = self.new_folder(n)?;
+        let before = self.call(&["photoflow_runs"])?;
+        self.call(&[
+            "set_pref",
+            "after_import",
+            "bool",
+            if process { "1" } else { "0" },
+        ])?;
+        let imported = self.call(&["import_n", &dir.to_string_lossy(), &n.to_string()]);
+        self.call(&["set_pref", "after_import", "bool", "0"])?;
+        imported?;
+        if process {
+            self.wait_photoflow(&before)?;
+        }
+        Ok(photos)
+    }
+
+    /// Waits until photoflow's script has finished a run started after `before` runs.
+    fn wait_photoflow(&mut self, before: &str) -> Result<()> {
+        let error = self.call(&["wait_photoflow", before])?;
+        if !error.is_empty() {
+            bail!("photoflow's darktable script: {error}");
+        }
+        Ok(())
     }
 
     /// Imports a fresh copy of the test raw, in its own folder.
@@ -406,6 +470,33 @@ impl Driver for App {
         }
         let history = sidecar::read(&sidecar_of(&photo))?;
         Ok(edit_state(&library, &history))
+    }
+
+    fn import_new_folder(&mut self, n: usize) -> Result<Vec<PathBuf>> {
+        self.import_folder(n, true)
+    }
+
+    fn old_folder(&mut self, n: usize) -> Result<Vec<PathBuf>> {
+        self.import_folder(n, false)
+    }
+
+    fn start_tool_on(&mut self, photos: &[PathBuf]) -> Result<()> {
+        self.lighttable()?;
+        let before = self.call(&["photoflow_runs"])?;
+        let paths: Vec<String> = photos.iter().map(|p| p.to_string_lossy().into()).collect();
+        let mut args = vec!["process"];
+        args.extend(paths.iter().map(String::as_str));
+        self.call(&args)?;
+        self.wait_photoflow(&before)
+    }
+
+    fn processed(&mut self) -> Result<Vec<PathBuf>> {
+        Ok(self
+            .call(&["processed"])?
+            .split('\u{1f}')
+            .filter(|p| !p.is_empty())
+            .map(PathBuf::from)
+            .collect())
     }
 }
 

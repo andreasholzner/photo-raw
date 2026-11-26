@@ -4,11 +4,14 @@
 //! lighttable changes at once. Sidecars are real XMP text, read back with the tool's own reader.
 
 use super::{Change, Driver};
+use crate::classify::Class;
 use crate::edit_state::{EditState, LibraryState, edit_state, edit_tag};
+use crate::process::{self, Handover, Step};
 use crate::sidecar::{self, History};
 use anyhow::{Context, Result};
 use base64::Engine;
 use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Entry {
@@ -195,10 +198,65 @@ impl Photo {
     }
 }
 
-/// The simulated darktable as a scenario driver: one photo per scenario.
+/// The simulated darktable as a scenario driver: one photo per scenario for the edit-state
+/// rules, plus a library of folders for the hand-over (US-8). The hand-over follows photoflow's
+/// darktable script: newly imported photos at once, others when the owner starts the tool on
+/// them; the plan comes from the tool's own planning code.
 #[derive(Debug, Default)]
 pub struct Sim {
     photo: Photo,
+    library: Vec<(PathBuf, Photo)>,
+    folders: usize,
+}
+
+impl Sim {
+    fn folder(&mut self, n: usize) -> Vec<PathBuf> {
+        self.folders += 1;
+        let photos: Vec<PathBuf> = (1..=n)
+            .map(|i| PathBuf::from(format!("/sim/{}/{i}.ARW", self.folders)))
+            .collect();
+        for p in &photos {
+            self.library.push((p.clone(), Photo::unedited()));
+        }
+        photos
+    }
+
+    /// Hands `photos` over and carries out the plan (every simulated photo is a day photo).
+    fn hand_over(&mut self, photos: &[PathBuf]) {
+        let handover = Handover {
+            darkroom_open: false,
+            photos: photos
+                .iter()
+                .map(|raw| {
+                    let p = &self.library.iter().find(|(r, _)| r == raw).unwrap().1;
+                    process::Photo {
+                        raw: raw.clone(),
+                        sidecar: raw.with_extension("ARW.xmp"),
+                        altered: p.library.is_altered,
+                        tags: p.library.tags.clone(),
+                    }
+                })
+                .collect(),
+        };
+        for (raw, steps) in process::plan(&handover, |_| Ok(Class::Day)) {
+            let tags = &mut self
+                .library
+                .iter_mut()
+                .find(|(r, _)| *r == raw)
+                .unwrap()
+                .1
+                .library
+                .tags;
+            for s in steps {
+                match s {
+                    Step::Clear => {
+                        tags.retain(|t| !process::CLEARED_PREFIXES.iter().any(|p| t.starts_with(p)))
+                    }
+                    Step::Tag(t) => tags.push(t),
+                }
+            }
+        }
+    }
 }
 
 fn change(h: &mut Hist, change: Change) {
@@ -272,5 +330,34 @@ impl Driver for Sim {
             .context("darktable wrote no sidecar")?
             .read();
         Ok(edit_state(&self.photo.library, &sidecar))
+    }
+
+    fn import_new_folder(&mut self, n: usize) -> Result<Vec<PathBuf>> {
+        let photos = self.folder(n);
+        self.hand_over(&photos);
+        Ok(photos)
+    }
+
+    fn old_folder(&mut self, n: usize) -> Result<Vec<PathBuf>> {
+        Ok(self.folder(n))
+    }
+
+    fn start_tool_on(&mut self, photos: &[PathBuf]) -> Result<()> {
+        self.hand_over(photos);
+        Ok(())
+    }
+
+    fn processed(&mut self) -> Result<Vec<PathBuf>> {
+        Ok(self
+            .library
+            .iter()
+            .filter(|(_, p)| {
+                p.library
+                    .tags
+                    .iter()
+                    .any(|t| process::CLEARED_PREFIXES.iter().any(|x| t.starts_with(x)))
+            })
+            .map(|(r, _)| r.clone())
+            .collect())
     }
 }

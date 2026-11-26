@@ -63,6 +63,64 @@ function commands.import(dir)
   error("import of " .. dir .. " didn't finish within 120 s")
 end
 
+-- import of a folder of n photos: wait until all are in the library
+function commands.import_n(dir, n)
+  dt.database.import(dir)
+  for _ = 1, 240 do
+    local found = 0
+    for _, img in ipairs(dt.database) do
+      if img.path == dir then found = found + 1 end
+    end
+    if found >= tonumber(n) then dt.control.sleep(1000); return "" end
+    dt.control.sleep(500)
+  end
+  error("import of " .. dir .. " didn't finish within 120 s")
+end
+
+-- photoflow's own script (darktable/lua/photoflow.lua) and its preferences
+function commands.set_pref(name, kind, value)
+  if kind == "bool" then value = (value == "1") end
+  dt.preferences.write("photoflow", name, kind, value)
+  return ""
+end
+
+function commands.photoflow_runs() return tostring(photoflow.runs) end
+
+function commands.wait_photoflow(before)
+  for _ = 1, 600 do
+    if photoflow.runs > tonumber(before) and not photoflow.busy then
+      local err = photoflow.last_error or ""
+      photoflow.last_error = nil
+      return err
+    end
+    dt.control.sleep(500)
+  end
+  error("photoflow's script didn't finish within 5 minutes")
+end
+
+function commands.process(...)
+  local images = {}
+  for _, path in ipairs({ ... }) do images[#images + 1] = image(path) end
+  photoflow.process(images)
+  return ""
+end
+
+local PROCESSED = { "photoflow|class|", "photoflow|open|", "photoflow|left alone|" }
+
+function commands.processed()
+  local out = {}
+  for _, img in ipairs(dt.database) do
+    for _, t in ipairs(img:get_tags()) do
+      local hit = false
+      for _, p in ipairs(PROCESSED) do
+        if t.name:sub(1, #p) == p then hit = true; break end
+      end
+      if hit then out[#out + 1] = img.path .. "/" .. img.filename; break end
+    end
+  end
+  return table.concat(out, "\31")
+end
+
 function commands.state(path)
   local img = image(path)
   local tags = {}

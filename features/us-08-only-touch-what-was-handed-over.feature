@@ -70,8 +70,10 @@ Feature: US-8 — Only touch what was handed over
       And I have another photo open in the darkroom
       Then the tool leaves it alone and reports "darkroom is open"
 
-  @wip
+  @darktable
   Rule: Only photos handed over to the tool are processed
+    darktable hands photos over to the tool: newly imported photos at once, others when I start
+    the tool on them.
 
     Scenario: Newly imported photos are processed
       Given I import a folder of new photos

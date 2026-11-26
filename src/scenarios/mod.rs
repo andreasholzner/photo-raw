@@ -57,6 +57,16 @@ pub trait Driver: Send {
     fn open_other_photo_in_darkroom(&mut self) -> Result<()>;
     /// What the tool decides about the photo, from what darktable reports.
     fn edit_state(&mut self) -> Result<EditState>;
+
+    /// Imports a new folder of `n` photos; the tool processes newly imported photos.
+    fn import_new_folder(&mut self, n: usize) -> Result<Vec<PathBuf>>;
+    /// A folder of `n` photos imported earlier, without the tool.
+    fn old_folder(&mut self, n: usize) -> Result<Vec<PathBuf>>;
+    /// The owner starts the tool on these photos.
+    fn start_tool_on(&mut self, photos: &[PathBuf]) -> Result<()>;
+    /// Every photo in the library the tool has processed (it carries the tool's class, open-step
+    /// or report tags).
+    fn processed(&mut self) -> Result<Vec<PathBuf>>;
 }
 
 /// Which driver the next scenarios use.
@@ -77,6 +87,9 @@ pub struct ScenarioWorld {
     /// A real photo under test (`@darktable-cli`).
     photo: Option<PathBuf>,
     class: Option<Class>,
+    /// Photos of the scenario's folder, and those processed before the scenario's action.
+    folder: Vec<PathBuf>,
+    processed_before: Vec<PathBuf>,
     driver: Arc<Mutex<dyn Driver>>,
 }
 
@@ -97,6 +110,8 @@ impl ScenarioWorld {
             exposure: None,
             photo: None,
             class: None,
+            folder: Vec::new(),
+            processed_before: Vec::new(),
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -395,6 +410,48 @@ fn apply_style(w: &mut ScenarioWorld) {
 #[when("I compress its history stack")]
 fn compress(w: &mut ScenarioWorld) {
     w.with("compress the history", |d| d.compress_history());
+}
+
+#[given("I import a folder of new photos")]
+fn import_new(w: &mut ScenarioWorld) {
+    w.processed_before = w.with("list processed photos", |d| d.processed());
+    w.folder = w.with("import a folder", |d| d.import_new_folder(3));
+}
+
+#[given("a folder with photos imported last year")]
+fn old_folder(w: &mut ScenarioWorld) {
+    w.folder = w.with("import a folder without the tool", |d| d.old_folder(4));
+    w.processed_before = w.with("list processed photos", |d| d.processed());
+}
+
+#[when("I select two of them and start the tool")]
+fn start_on_two(w: &mut ScenarioWorld) {
+    let two = w.folder[1..3].to_vec();
+    w.with("start the tool", |d| d.start_tool_on(&two));
+    w.folder = two;
+}
+
+/// The photos processed since the scenario's action, compared with the expected ones.
+fn assert_processed_exactly(w: &mut ScenarioWorld) {
+    let now = w.with("list processed photos", |d| d.processed());
+    let mut new: Vec<&PathBuf> = now
+        .iter()
+        .filter(|p| !w.processed_before.contains(p))
+        .collect();
+    let mut expected: Vec<&PathBuf> = w.folder.iter().collect();
+    new.sort();
+    expected.sort();
+    assert_eq!(new, expected, "processed photos");
+}
+
+#[then("the tool processes exactly these photos")]
+fn processes_these(w: &mut ScenarioWorld) {
+    assert_processed_exactly(w);
+}
+
+#[then("the tool processes only the two selected photos")]
+fn processes_two(w: &mut ScenarioWorld) {
+    assert_processed_exactly(w);
 }
 
 #[then("the tool may edit it")]

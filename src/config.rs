@@ -30,6 +30,9 @@ pub struct Config {
     pub darktable: DarktableConfig,
     #[serde(default)]
     pub selftest: SelftestConfig,
+    /// The file the configuration was read from (handed on to photoflow's darktable script).
+    #[serde(skip)]
+    pub source: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -84,7 +87,10 @@ impl Config {
         }
         let text = std::fs::read_to_string(&path)
             .with_context(|| format!("cannot read the configuration {}", path.display()))?;
-        Self::parse(&text).with_context(|| format!("invalid configuration {}", path.display()))
+        let mut cfg = Self::parse(&text)
+            .with_context(|| format!("invalid configuration {}", path.display()))?;
+        cfg.source = Some(path);
+        Ok(cfg)
     }
 
     pub fn parse(text: &str) -> Result<Self> {

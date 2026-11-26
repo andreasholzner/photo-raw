@@ -55,6 +55,14 @@ private copy of your configuration, its own library and copies of one raw of the
 Scenarios that can't run unattended are listed at the end as manual checks. Your library,
 configuration and photos are not touched by either part.
 
+## darktable script
+
+`darktable/lua/photoflow.lua` hands photos over to `photoflow process`: newly imported photos
+at once (can be switched off in darktable's preferences, "lua options"), others with the
+shortcut "photoflow: process photos". For now it sorts photos into day, night and aurora and
+records open steps and reports as tags (`photoflow|class|…`, `photoflow|open|…`,
+`photoflow|left alone|…`); the edits themselves follow. Installing it is US-17.
+
 ## darktable setup
 
 One-time steps in darktable (styles, export presets): [docs/darktable-setup.md](docs/darktable-setup.md).

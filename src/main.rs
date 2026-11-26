@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use photoflow::{config, selftest};
+use photoflow::{classify, config, darktable, process, selftest};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -19,6 +19,13 @@ enum Command {
     /// Check that darktable still renders the reference photos as before
     #[command(subcommand)]
     Selftest(Selftest),
+    /// Process the photos darktable hands over (called by photoflow's darktable script)
+    Process {
+        /// Hand-over file written by the darktable script
+        handover: PathBuf,
+        /// Plan file for the darktable script to carry out
+        plan: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -44,6 +51,7 @@ fn main() -> ExitCode {
         Command::Selftest(Selftest::Run) => selftest::run(&cfg),
         Command::Selftest(Selftest::Scenarios) => selftest::scenarios(&cfg),
         Command::Selftest(Selftest::Accept) => selftest::accept(&cfg),
+        Command::Process { handover, plan } => run_process(&cfg, &handover, &plan),
     });
     match result {
         Ok(true) => ExitCode::SUCCESS,
@@ -53,4 +61,26 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+fn run_process(
+    cfg: &config::Config,
+    handover: &std::path::Path,
+    plan: &std::path::Path,
+) -> anyhow::Result<bool> {
+    // darktable-cli is prepared only when a night photo needs the aurora check
+    let mut check: Option<classify::AuroraCheck> = None;
+    process::run(handover, plan, |raw| {
+        if check.is_none() {
+            let work = cfg.data_dir()?.join("process");
+            let dt = darktable::Darktable::prepare(
+                &cfg.darktable.cli,
+                &cfg.darktable_config_dir()?,
+                &work,
+            )?;
+            check = Some(classify::AuroraCheck::new(dt, &work.join("renders"))?);
+        }
+        check.as_ref().unwrap().render(raw)
+    })?;
+    Ok(true)
 }
