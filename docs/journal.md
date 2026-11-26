@@ -1493,3 +1493,5 @@ N 0.6, M 1.0 (only where the target differs). Sheets `photo-edits/_us10/check/sh
   it is close to it and cleaner. The bright-foreground scenes (_DSC7305, _DSC8305) look right at
   0.14.
 - _DSC3492 failed in the foreground solver (degenerate foreground, as in US-18 round 3).
+- **Owner's decision:** threshold 1.0 (M). Some photos show more visible noise at the bright
+  target; corrected by hand for now, a noise-aware rule is US-24 (backlog).

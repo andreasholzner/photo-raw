@@ -78,6 +78,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-21](#us-21--night-auto-edit)                                | 🚧     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
 | [US-22](#us-22--dehaze-proposal-for-long-range-views)           | ⏳     | Dehaze proposal for long-range views           | [Automatic editing](#automatic-editing)         |
 | [US-23](#us-23--horizon-line-per-photo)                         | 📋     | Horizon line per photo                         | [Automatic editing](#automatic-editing)         |
+| [US-24](#us-24--noise-aware-aurora-brightness)                  | ⏳     | Noise-aware aurora brightness                  | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -247,10 +248,11 @@ The self-test checks the tool's edits of the reference set's aurora photos like 
 the upgrade block of US-9 applies.
 
 **Notes:** Sky targets (journal 2026-11-26): sky median 0.24, or 0.14 where the scene's foreground is
-at least 0.6 × as bright as its sky (measured on the aurora check render); sky background
+at least as bright as its sky (ratio ≥ 1.0, measured on the aurora check render; 0.6 darkened the
+snowy January 2026 nights the owner had accepted bright); sky background
 neutral blue R/G 0.95, B/G 1.35, blue-violet 1.05, 1.50. Against the owner's own edits the rule is
 off by a median 0.4 EV (the owner's style changed between years); the owner adjusts single photos
-with the exposure slider. On very dark foregrounds (village lights, mountains) the foreground
+with the exposure slider, or lowers visible noise there with the luma denoise strength (US-24). On very dark foregrounds (village lights, mountains) the foreground
 correction made no measurable difference (journal 2026-11-25, round 3).
 
 **Decisions:** US-10 → ADR-0003, ADR-0004
@@ -315,6 +317,16 @@ so that sky and foreground can be treated separately without me drawing masks.
 US-21) and by the gradient filter proposal (US-11). In the experiments so far the horizon was set
 by hand per photo, as a straight line; a straight line fits poorly where a peak rises into the sky
 (DSC00461, journal 2026-11-26). Worked out by an analysis on the owner's photos first.
+
+### US-24 — Noise-aware aurora brightness
+
+**Backlog ⏳** — As the owner, I want noisy aurora photos to get a darker sky or a stronger denoise
+by themselves, so I don't have to correct them one by one.
+
+**Notes:** With the bright sky target (US-10) some photos show visible noise; the owner corrects
+them with the exposure slider or the luma denoise strength. US-18 found that the measured sky noise
+matches what the owner perceives as noisy; an experiment would find the noise level above which
+the darker target or a stronger luma denoise is better.
 
 ## Panoramas
 
