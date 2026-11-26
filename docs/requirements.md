@@ -40,7 +40,7 @@ table when its stories ship. Each story's own state is recorded with the story a
 
 | Step | Stories                     | Why here                                                                       |
 |------|-----------------------------|--------------------------------------------------------------------------------|
-| 5    | US-10, US-21                | The tool's core: aurora and night edits                                        |
+| 5    | US-23, US-10, US-21         | The tool's core: aurora and night edits (they need the horizon line)           |
 | 6    | US-14, US-17                | The to-do panel and the installation make it usable day to day                 |
 | 7    | US-11 – US-13, US-15, US-19 | Proposals, panoramas, collection-wide status                                   |
 
@@ -74,6 +74,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 | [US-21](#us-21--night-auto-edit)                                | 🚧     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
 | [US-22](#us-22--dehaze-proposal-for-long-range-views)           | ⏳     | Dehaze proposal for long-range views           | [Automatic editing](#automatic-editing)         |
+| [US-23](#us-23--horizon-line-per-photo)                         | 📋     | Horizon line per photo                         | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
 
@@ -232,19 +233,20 @@ at 0.885). Dehaze is off by default; proposing it for long-range views is US-22.
 colourful, not neon — so I can cull after editing.
 
 **Acceptance criteria:** Aurora base (US-18) plus per-photo sky brightness and per-photo sky colour
-(the aurora changes within minutes). A per-night preference (neutral blue to blue-violet) is the
-default and can be overridden per photo. The brightness target depends on the scene (e.g. a lit
+(the aurora changes within minutes). The brightness target depends on the scene (e.g. a lit
 foreground gets a darker target). The sky targets are derived from the owner's past aurora edits and
-checked on them. The foreground (land below the horizon) gets its own per-photo colour correction
-towards slightly blue snow (US-18). Variants for comparison are available. The self-test checks the
-tool's edits of the reference set's aurora photos like the day edits, and the upgrade block of US-9
-applies.
+checked on them. The foreground (land below the horizon, US-23) gets its own per-photo colour
+correction towards slightly blue snow (US-18). The sky colour (neutral blue or blue-violet) is
+chosen per night and can be overridden per photo: until it is chosen, a night's photos get a
+default colour, an open step for the night, and duplicates in the other colour to compare; once
+chosen, the tool redoes the edits and removes its comparison duplicates nobody changed (ADR-0003).
+The self-test checks the tool's edits of the reference set's aurora photos like the day edits, and
+the upgrade block of US-9 applies.
 
-**Notes:** The foreground correction needs the horizon line per photo, like the gradient filter of
-US-11; in the US-18 experiments it was set by hand. On very dark foregrounds (village lights,
-mountains) the correction made no measurable difference (journal 2026-11-25, round 3).
+**Notes:** On very dark foregrounds (village lights, mountains) the foreground correction made no
+measurable difference (journal 2026-11-25, round 3).
 
-**Decisions:** US-10 → ADR-0004
+**Decisions:** US-10 → ADR-0003, ADR-0004
 
 ### US-11 — Gradient filter proposal
 
@@ -286,6 +288,16 @@ distant mountain ranges, so I don't have to switch it on by hand on every long-r
 **Notes:** US-4 found that "dehaze" helps long-range views (separates distant layers, thins the
 blue veil); no rule tells such views apart yet. Until then the owner switches dehaze on per photo
 with a tag (US-9); those switches are the data to find a rule from.
+
+### US-23 — Horizon line per photo
+
+**Planned 📋** — As the owner, I want the tool to find where the land meets the sky in each photo,
+so that sky and foreground can be treated separately without me drawing masks.
+
+**Notes:** Needed by the aurora and night edits (foreground correction, sky-only steps: US-10,
+US-21) and by the gradient filter proposal (US-11). In the experiments so far the horizon was set
+by hand per photo, as a straight line; a straight line fits poorly where a peak rises into the sky
+(DSC00461, journal 2026-11-26). Worked out by an analysis on the owner's photos first.
 
 ## Panoramas
 
