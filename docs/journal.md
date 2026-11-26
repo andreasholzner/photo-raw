@@ -1254,3 +1254,24 @@ owner's edit, Z).
 - **Owner's verdict:** on _DSC0905 and _DSC0926 the stars look less bright and warmer; the
   foreground of _DSC0926 is good; _DSC4743's Z is liked very much. The star punch measure (a
   ratio to the surrounding sky) hides that the stars themselves got dimmer as the sky got darker.
+
+### 2026-11-26 — US-21, round 7: star WB last, star brightness by the tone equalizer (3 photos)
+
+_DSC0905, _DSC0926, _DSC4743. Round 6 plus: star WB solved last, with the sky tints and the star
+chroma (lowered to 0.6) in place, alternated with the tints twice; the sky-masked tone equalizer's
+bright bands (−2 … 0 EV) raised by k EV, solved so that the stars' peak brightness (median of the
+300 brightest peaks) matches the owner's edit. Sheets `photo-edits/_us21/round7/`.
+
+| photo | star peak A / Z2 | k | stars R/G, B/G A / Z (r6) / Z2 |
+|---|---|---|---|
+| _DSC0905 | 0.76 / 0.51 | 2.46 (limit) | 0.96, 1.08 / 0.97, 1.02 / 0.97, 1.13 |
+| _DSC0926 | 0.55 / 0.45 | 2.46 (limit) | 1.02, 0.93 / 1.04, 0.88 / 1.00, 1.12 |
+| _DSC4743 | 0.63 / 0.58 | 2.46 (limit) | 0.93, 1.44 / 0.89, 1.17 / 0.96, 1.14 |
+
+- The median star colour reaches the target, but on _DSC0926 the individual stars split into
+  orange and blue ones (the chroma boost spreads them apart around a neutral median), and the
+  bluer WB turns the lit foreground cyan (white rocks, mat).
+- The stars' brightness doesn't reach the owner's even at the solver's limit: AgX compresses
+  the brightest values, so raising them before the tone mapper does little.
+- _DSC0905's foreground just below the horizon got darker (the soft mask edge reaches into it).
+- Not an improvement over round 6.
