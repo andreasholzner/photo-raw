@@ -1318,3 +1318,22 @@ _DSC4743; sheets `photo-edits/_us21/modern/` (columns: owner's edit, Z of round 
   vs 0.45 on _DSC0905) and larger. Neither the modern defaults nor the tuned pipeline get there;
   the owner's star look comes from display-referred steps (high pass, low pass, curves) that
   current practice avoids.
+- **Owner's verdict on the modern recipe:** M1 and M2 are worse than Z; for _DSC4743 round 6's Z is
+  as good as the owner's own edit.
+
+### 2026-11-26 — US-21: star size, star brightness and exposure (_DSC0905, _DSC0926)
+
+Measured at full size in a sky patch (`experiments/us21_stars.py`, `star_size`: area of the 200
+brightest stars above half of peak − sky). _DSC0905: owner's edit 12 px, peak 0.80, sky 0.095; Z3
+14 px, peak 0.65, sky 0.054. **Z3's stars are not smaller than the owner's — they are dimmer, on a
+much darker sky.** Weaker luma denoise (0.35) changed nothing measurable; diffuse "artistic effects |
+bloom" made the cores smaller and dimmer (it spreads light away from them). Exposure on Z3:
++0.4 EV → peak 0.68, sky 0.074; +0.8 → 0.72, 0.109; +1.2 → 0.80, 0.144 — the sky brightens faster
+than the stars (AgX compresses the highlights). A brightness-only white-point curve after AgX
+(white point 0.8 … 0.5) barely moved the measured peaks (0.63–0.68); not understood.
+
+Sheets with Z3 at +0.4 and +0.8 EV: `photo-edits/_us21/round9/`. At sheet size the stars in all Z3
+variants look yellow-orange where the owner's are white (the core-average colour measure says
+neutral, so it misses this), and _DSC0926's foreground is over-saturated (mat, grass): the star
+chroma boost and the colour balance act on the whole frame.
+- **Owner's decision:** +0.4 EV and no star chroma boost, on all six photos (round 10).
