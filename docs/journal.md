@@ -1407,3 +1407,34 @@ Round 10's F with the exposure solved per photo so that the sky median (upper 55
   difference between the two is only the exposure module's value (≈ +0.3 EV), which the owner can
   adjust per photo in darktable (the photo then counts as edited by hand, US-8). → **Sky median
   0.065 is the default** for the night edit.
+
+### 2026-11-26 — US-10: sky targets from the owner's aurora edits
+
+The 75 aurora photos of the US-7 analysis, each in its owner-approved version: the owner's own edit
+(33: 2019, 2022, 2024, 2026-09), or the 2026-01/03 recipe output accepted per night (42 — their
+brightness was set by the recipe's fixed target, so they show the owner's colour choice only).
+Measured at 300 px (`experiments/us10_targets.py`): sky median (upper 55 %), sky-background colour
+(25–50 % band), and — independent of the edit — the scene's foreground-to-sky brightness in the
+linear aurora-check render (lower 25 % vs upper 55 %).
+
+| night (source) | n | sky median | background R/G, B/G |
+|---|---|---|---|
+| 2019 Nordnorwegen (own) | 20 | 0.238 (0.12–0.35) | 0.77, 1.37 |
+| 2022-09-25 Tromsø (own) | 2 | 0.140 | 0.84, 1.18 |
+| 2024-03-02 Dividalen (own) | 4 | 0.115 | 0.93, 0.55 |
+| 2024-03-23 Dividalen (own) | 3 | 0.147 | 0.97, 1.11 |
+| 2024-03-28 Finnland (own) | 1 | 0.076 | 0.72, 2.13 |
+| 2026-01-11 (recipe, colour "B" chosen) | 24 | 0.231 | 0.96, 1.35 |
+| 2026-01-23 (recipe, colour "C" chosen) | 16 | 0.233 | 1.06, 1.50 |
+| 2026-03-10 Kvænangen (recipe, darker target chosen) | 2 | 0.144 | 0.99, 1.38 |
+| 2026-09-05 Narvik-Alta (own) | 3 | 0.225 | 0.54, 0.93 |
+
+- **Brightness:** one fixed target misses the owner's own edits by a median 0.44–0.47 EV (best at
+  0.20–0.22); the owner's style changed between 2019 (≈ 0.24) and 2024 (≈ 0.13–0.16).
+- **Scene dependence:** a bright foreground relative to the sky (scene ratio ≥ 0.6) goes with a
+  darker sky — within 2019 0.243 → 0.195, within 2024 0.163 → 0.130, about −0.3 EV; the overall
+  correlation (−0.48) is inflated by the year (7 of 8 bright-foreground scenes are from 2024). A
+  two-level rule (0.24 / 0.14 at ratio 0.6) improves the median error only from 0.47 to 0.41 EV.
+- **Colour:** the owner's own edits are spread widely (background B/G 0.55–2.13); the owner's
+  explicit choices of 2026-11-22 are the clearest reference: neutral blue = R/G 0.95, B/G 1.35
+  ("B"), blue-violet = 1.05, 1.50 ("C").
