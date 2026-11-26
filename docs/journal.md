@@ -1465,3 +1465,31 @@ foreground crop); _DSC0914 has no foreground.
 - A brighter foreground lifts the sky near the horizon a little: the local-contrast steps work on
   neighbourhoods (an extreme +2 EV lifted the sky by up to 15 %).
 - **Owner's verdict on round 12:** H2 is fine.
+
+### 2026-11-26 — US-10: check round of the sky targets
+
+11 aurora photos (reference set + 2026 favourites) in the US-18 base with the rule's targets — no
+matching to the owner's edits; WB for the sky background (neutral blue; blue-violet for
+2026-01-23); foreground colour correction (US-18) at hand-set horizons. The 0.6 threshold of the
+rule as analysed gives all January 2026 photos (snowy ground, scene ratio 0.79–0.97) the dark
+target, although the owner accepted the bright one for those nights → two thresholds rendered:
+N 0.6, M 1.0 (only where the target differs). Sheets `photo-edits/_us10/check/sheet_<photo>.png`
+(columns: owner-approved version, N, M).
+
+| photo | scene ratio | N | M |
+|---|---|---|---|
+| _DSC3735 | 0.38 | 0.24 | 0.24 |
+| _DSC6085 | 0.51 | 0.24 | 0.24 |
+| _DSC7371 | 0.78 | 0.14 | 0.24 |
+| _DSC8257 | 0.80 | 0.14 | 0.24 |
+| _DSC8287 | 0.87 | 0.14 | 0.24 |
+| _DSC8296 | 0.90 | 0.14 | 0.24 |
+| _DSC7579 | 0.95 | 0.14 | 0.24 |
+| _DSC8300 | 0.97 | 0.14 | 0.24 |
+| _DSC8305 | 1.14 | 0.14 | 0.14 |
+| _DSC7305 | 1.52 | 0.14 | 0.14 |
+
+- January 2026 at 0.14 (N) is clearly darker than the accepted version, the aurora dim; at 0.24 (M)
+  it is close to it and cleaner. The bright-foreground scenes (_DSC7305, _DSC8305) look right at
+  0.14.
+- _DSC3492 failed in the foreground solver (degenerate foreground, as in US-18 round 3).
