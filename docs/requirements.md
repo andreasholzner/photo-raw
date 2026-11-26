@@ -308,7 +308,8 @@ have missed.
 
 **Acceptance criteria:** [us-12-panorama-sets.feature](../features/us-12-panorama-sets.feature)
 
-**Notes:** Proposals are consecutive photos at most 10 s apart with the same focal length; exposure
+**Notes:** Proposals are consecutive photos at most 10 s apart with the same focal length (compared
+in whole millimetres, rounded); exposure
 brackets belong to their panorama's set. The source photos of past panoramas no longer exist (the
 owner deletes them after stitching), so the threshold is the owner's, not fitted. Used only
 through the to-do panel (US-14).

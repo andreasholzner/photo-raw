@@ -4,7 +4,8 @@ Feature: US-12 — Panorama sets
 
   A panorama set is a tag on its photos, named after the set's first photo, e.g.
   "photoflow|panorama|_DSC6319"; a photo belongs to one set at most. The tool proposes sets from
-  photos taken in quick succession; a proposal is never stitched until I confirm it (US-13).
+  photos taken in quick succession with the same focal length (in whole millimetres, rounded); a
+  proposal is never stitched until I confirm it (US-13).
   Exposure brackets taken for a panorama simply belong to its set. The actions below are buttons
   in the to-do panel (US-14).
 
