@@ -1495,3 +1495,24 @@ N 0.6, M 1.0 (only where the target differs). Sheets `photo-edits/_us10/check/sh
 - _DSC3492 failed in the foreground solver (degenerate foreground, as in US-18 round 3).
 - **Owner's decision:** threshold 1.0 (M). Some photos show more visible noise at the bright
   target; corrected by hand for now, a noise-aware rule is US-24 (backlog).
+
+### 2026-11-26 — US-23: round 1, horizon from brightness edges
+
+15 aurora and night photos with hand-set horizons (US-18, US-21), on the small linear renders of
+US-7. Two simple detectors, both per vertical strip (12 strips) with a robust line through the
+strip points (local experiment script): v1 the row with the largest brightness step, v2 the
+first row that leaves a sky model (brightness and texture of the top 30 %). Sheet
+`photo-edits/_us23/round1.png` (red hand line, yellow v1, green v2).
+
+| detector | median error (frame height) | within 0.05 |
+|---|---|---|
+| v1 brightness step | 0.072 | 5 of 15 |
+| v2 sky model | 0.059 | 5 of 15 |
+
+- Brightness alone doesn't separate sky and land at night: the strongest step is often the edge of
+  a snowfield or forest below the horizon (snow is as bright as an aurora sky), and aurora bands and
+  the Milky Way leave the sky model. Clear-sky photos with a bright ground (_DSC0905) work.
+- The hand lines mark where the edits' gradients should start, which is not always the land/sky
+  edge (on _DSC8287 the treetops, not the snow edge) — a reference for a detector needs the true
+  skyline.
+- Hand-tuned rules on brightness won't reach a usable rate; next is a sky segmentation model.

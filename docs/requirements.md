@@ -77,7 +77,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-20](#us-20--self-test-checks-darktable-behaviour)           | ✅     | Self-test checks darktable behaviour           | [Foundation](#foundation)                       |
 | [US-21](#us-21--night-auto-edit)                                | 🚧     | Night auto-edit                                | [Automatic editing](#automatic-editing)         |
 | [US-22](#us-22--dehaze-proposal-for-long-range-views)           | ⏳     | Dehaze proposal for long-range views           | [Automatic editing](#automatic-editing)         |
-| [US-23](#us-23--horizon-line-per-photo)                         | 📋     | Horizon line per photo                         | [Automatic editing](#automatic-editing)         |
+| [US-23](#us-23--horizon-line-per-photo)                         | 🚧     | Horizon line per photo                         | [Automatic editing](#automatic-editing)         |
 | [US-24](#us-24--noise-aware-aurora-brightness)                  | ⏳     | Noise-aware aurora brightness                  | [Automatic editing](#automatic-editing)         |
 
 ### Maintaining this file
@@ -310,7 +310,7 @@ with a tag (US-9); those switches are the data to find a rule from.
 
 ### US-23 — Horizon line per photo
 
-**Planned 📋** — As the owner, I want the tool to find where the land meets the sky in each photo,
+**In progress 🚧** — As the owner, I want the tool to find where the land meets the sky in each photo,
 so that sky and foreground can be treated separately without me drawing masks.
 
 **Notes:** Needed by the aurora and night edits (foreground correction, sky-only steps: US-10,
