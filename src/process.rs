@@ -173,6 +173,16 @@ fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Optio
     }
     let wanted = Wanted::from(switches);
     if state == EditState::OwnEdit && day_edit::current(&history) == Some(wanted) {
+        // the edit stays; a look tag that confirms it answers the snow question
+        let snow = format!("{OPEN_TAG}{SNOW_CHECK_LOOK}");
+        if switches.look.is_some() && p.tags.contains(&snow) {
+            let keep = p
+                .tags
+                .iter()
+                .filter(|t| (t.starts_with(OPEN_TAG) && **t != snow) || t.starts_with(LEFT_TAG));
+            steps.extend(keep.cloned().map(tag));
+            return Ok(Some(steps));
+        }
         return Ok(None);
     }
     if let Some(why) = tools.edits_blocked()? {
@@ -487,6 +497,60 @@ mod tests {
         assert_eq!(
             tags_of(&p[1].1),
             vec!["photoflow|class|day", "photoflow|open|check exposure"]
+        );
+    }
+
+    #[test]
+    fn a_look_tag_confirming_the_edit_answers_the_snow_question_only() {
+        // a photo the tool edited in AgX, with the snow question and another open step
+        let edited = day_edit::build(
+            IMPORT,
+            Wanted {
+                look: day_edit::Look::Agx,
+                dehaze: false,
+            },
+            0.0,
+        )
+        .unwrap();
+        let fp = edit_tag(&sidecar::parse(&edited).unwrap());
+        struct Edited(String);
+        impl Tools for Edited {
+            fn classify(&mut self, _: &Photo) -> Result<Class> {
+                Ok(Class::Day)
+            }
+            fn sidecar_text(&mut self, _: &Photo) -> Result<String> {
+                Ok(self.0.clone())
+            }
+            fn day_edit(&mut self, _: &Photo, _: &str, _: Wanted) -> Result<day_edit::Solved> {
+                panic!("re-edited")
+            }
+            fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {
+                panic!("re-edited")
+            }
+            fn edits_blocked(&mut self) -> Result<Option<String>> {
+                Ok(None)
+            }
+        }
+        let tags = [
+            "photoflow|class|day",
+            fp.as_str(),
+            "photoflow|open|snow: check look",
+            "photoflow|open|other",
+        ];
+        let text = format!(
+            "darkroom\t0\n{}\n{}\n",
+            photo("/p/a.ARW", true, &tags),
+            photo(
+                "/p/b.ARW",
+                true,
+                &[tags.as_slice(), &["photoflow|look|agx"]].concat()
+            )
+        );
+        let p = plan(&parse_handover(&text).unwrap(), &mut Edited(edited));
+        assert!(p[0].1.is_empty(), "nothing changed, nothing to do");
+        assert_eq!(
+            tags_of(&p[1].1),
+            vec!["photoflow|class|day", "photoflow|open|other"]
         );
     }
 
