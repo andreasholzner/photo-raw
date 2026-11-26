@@ -1230,3 +1230,27 @@ Sheets `photo-edits/_us21/round5/sheet_<photo>.png` (columns: owner's edit, Y).
   that Y renders grey. Y is overall a little darker.
 - _DSC4743's dark sky ended up violet by the numbers (R/G 1.18, B/G 3.08) — the two tints pull on
   each other and the solver finished on the glow; at that darkness it shows as near-black.
+- **Owner's verdict on round 5:** better; star colours still a little off; the photos look
+  darker, especially the foregrounds (except _DSC4743); the dark sky background is better than in
+  the owner's own edits.
+
+### 2026-11-26 — US-21, round 6: star WB slightly blue, tone equalizer masked to the sky
+
+Round 5 plus: star WB solved towards the owner's star colour (median R/G 0.95, B/G 1.12 over the six
+edits) instead of neutral; the tone equalizer restricted to the sky by a drawn gradient mask above
+the horizon (set by hand: DSC00461 0.65, _DSC0905 0.90, _DSC0909 0.97, _DSC0914 1.0, _DSC0926 0.70,
+_DSC4743 0.73 from the top). Sheets `photo-edits/_us21/round6/sheet_<photo>.png` (columns:
+owner's edit, Z).
+
+- **Masks need a current sidecar version:** built on the 2018/2020 sidecars (`xmp_version` 2),
+  darktable ignored the drawn mask entirely (the masked module acted on the whole frame); with
+  `xmp_version` 5 the mask works. The version also shifts the render a little on its own
+  (sky 0.067 → 0.060 on _DSC0926), so rounds 1–5 built those photos on their old sidecar
+  version — as the aurora check showed (journal 2026-11-25), the tool has to write it explicitly.
+- Foregrounds back at the owner's brightness (_DSC0926: grass and sleeping bags match).
+- Stars still too warm on DSC00461 and _DSC0926 (B/G 0.82–0.88, target 1.12): the star WB was
+  solved before the sky tints and the star chroma boost, which then shift the stars; the chroma
+  boost amplifies a leftover yellow cast to orange.
+- **Owner's verdict:** on _DSC0905 and _DSC0926 the stars look less bright and warmer; the
+  foreground of _DSC0926 is good; _DSC4743's Z is liked very much. The star punch measure (a
+  ratio to the surrounding sky) hides that the stars themselves got dimmer as the sky got darker.
