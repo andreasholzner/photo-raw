@@ -1275,3 +1275,21 @@ bright bands (−2 … 0 EV) raised by k EV, solved so that the stars' peak brig
   the brightest values, so raising them before the tone mapper does little.
 - _DSC0905's foreground just below the horizon got darker (the soft mask edge reaches into it).
 - Not an improvement over round 6.
+
+### 2026-11-26 — US-21, round 8: a star curve after AgX (_DSC0905, _DSC0926)
+
+Round 6's Z plus a tone curve after AgX (in darktable's order the tone curve, levels and local
+contrast all come after AgX), brightness only ("preserve colors: luminance"): identity up to a
+display brightness of 0.2 (sky, Milky Way glow), lifted above; strength solved so that the stars'
+peak brightness matches the owner's edit. Sheets `photo-edits/_us21/round8/` (columns A, Z, Z3).
+
+| photo | star peak A / Z / Z3 | punch A / Z / Z3 | stars R/G, B/G A / Z3 |
+|---|---|---|---|
+| _DSC0905 | 0.76 / 0.44 / 0.53 | 7.1 / 7.7 / 8.3 | 0.96, 1.08 / 0.94, 1.04 |
+| _DSC0926 | 0.55 / 0.40 / 0.47 | 7.8 / 12.3 / 12.7 | 1.02, 0.93 / 1.03, 0.88 |
+
+- The curve hit the solver's limit on both and lifts the star peaks by only ~20 %: at 1500 px a
+  star core is a pixel or two, mixed with the sky around it.
+- The visible difference to the owner's edits is star **size**: the owner's stars are larger,
+  white blobs (high pass and low pass in those edits, little luma denoise), the candidates'
+  stars are small points. Current astro practice tends to shrink stars rather than enlarge them.
