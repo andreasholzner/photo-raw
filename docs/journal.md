@@ -1383,3 +1383,23 @@ flags failed on _DSC6299 (bright snow):
   maximum, over 882 of the 1925 day photos (the scan was stopped there): > 0.1 % on 25, > 0.3 % on
   16, > 1 % on 3 (max 1.5 %, _DSC0831). The top six are all backlit scenes with blown sky next to
   the sun. Threshold for the "check exposure" open step: 0.3 %.
+
+### 2026-11-26 — US-21, round 11: a sky-brightness target instead of +0.4 EV
+
+Round 10's F with the exposure solved per photo so that the sky median (upper 55 % of the frame,
+300 px) reaches a target; two levels, G1 0.065 and G2 0.085. Sheets
+`photo-edits/_us21/round11/sheet_<photo>.png` (columns: owner's edit, F, G1, G2).
+
+| photo | sky median A / F / G1 / G2 | exposure EV F / G1 / G2 | star peak A / F / G1 / G2 |
+|---|---|---|---|
+| DSC00461 | 0.101 / 0.078 / 0.067 / 0.086 | 1.31 / 1.17 / 1.40 | 0.79 / 0.56 / 0.52 / 0.59 |
+| _DSC0905 | 0.108 / 0.086 / 0.064 / 0.086 | 1.83 / 1.49 / 1.83 | 0.76 / 0.58 / 0.54 / 0.58 |
+| _DSC0909 | 0.104 / 0.092 / 0.063 / 0.081 | 2.28 / 1.73 / 2.13 | 1.00 / 0.62 / 0.57 / 0.60 |
+| _DSC0914 | 0.135 / 0.129 / 0.063 / 0.080 | 3.03 / 2.04 / 2.46 | 0.79 / 0.69 / 0.58 / 0.62 |
+| _DSC0926 | 0.073 / 0.044 / 0.063 / 0.084 | 2.38 / 2.82 / 3.11 | 0.54 / 0.51 / 0.55 / 0.57 |
+| _DSC4743 | 0.100 / 0.107 / 0.062 / 0.079 | 3.91 / 3.33 / 3.61 | 0.63 / 0.78 / 0.62 / 0.67 |
+
+- The target pulls the outliers in: _DSC0914 and _DSC4743 get 0.6–1.0 EV less than F, _DSC0926
+  0.4–0.7 EV more. Star brightness follows the exposure (G1 dimmest).
+- _DSC4743's foreground (moonlit rocks) stays over-bright and cold even in G1: the sky target
+  can't fix the foreground.
