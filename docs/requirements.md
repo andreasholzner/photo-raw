@@ -187,8 +187,8 @@ relies on, so that a darktable upgrade can't silently break it.
 
 **Acceptance criteria:** The self-test also runs the executable scenarios that depend on darktable
 (ADR-0006): those tagged `@darktable` against the darktable application with a private
-configuration and library. They run on the owner's machine, with its darktable and desktop, as part of the self-test, and in the development
-container. Scenarios that can't be run unattended are listed as manual checks.
+configuration and library. They run on the owner's machine, with its darktable on a virtual screen, as part of the self-test,
+and in the development container. Scenarios that can't be run unattended are listed as manual checks.
 
 **Notes:** A spike showed that a Lua script can drive everything US-8's scenarios need
 unattended, also under a virtual display (journal 2026-11-24, `spikes/us-20-darktable-tests/`).

@@ -1054,3 +1054,19 @@ violet towards the edges.
 Full-size JPGs and sidecars for all columns in `photo-edits/_us18/round4/<folder>/`.
 - **Owner's verdict on round 4:** D at strength 0.7 is fine and replaces E (no noise-dependent
   switch needed); snow target B looks best.
+
+### 2026-11-26 — US-20: the self-test's darktable on the owner's desktop
+
+On the owner's machine the `@darktable` scenarios failed in ways the container never showed:
+- **Sidecar read too early:** right after `apply_sidecar` and the tag change that makes darktable
+  write the sidecar, the driver sometimes still read the unedited sidecar, so the fingerprint
+  tag named the wrong history and the tool's own edit counted as "edited by hand". In the
+  container this failed every time once darktable's welcome dialog was switched off, which had
+  slowed it down. → The driver waits until the sidecar has changed and stopped changing.
+- **The mouse pointer decides which photo the darkroom opens:** with the pointer inside
+  darktable's window, entering the darkroom opened the photo darktable last had "under the
+  mouse" (after leaving the darkroom, the previous scenario's photo) instead of the selected one;
+  the driver then waited in vain for its photo. The welcome dialog had hidden this by taking the
+  pointer events. Switching the darkroom to the right photo afterwards (`display_image`) loaded
+  it, but the following changes didn't land on it. darktable also opens full screen.
+  → The self-test always runs darktable on a virtual screen (Xvfb), also on a desktop.

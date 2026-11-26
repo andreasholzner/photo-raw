@@ -117,15 +117,12 @@ impl App {
             .context("the reference set has no raw photo")?;
         let raw = locate(&cfg.photo_root, p.year, &p.file)?;
 
-        let headless =
-            std::env::var_os("DISPLAY").is_none() && std::env::var_os("WAYLAND_DISPLAY").is_none();
-        let mut cmd = if headless {
-            let mut c = Command::new("xvfb-run");
-            c.args(["-a", "-s", "-screen 0 1600x1000x24", &cfg.darktable.app]);
-            c
-        } else {
-            Command::new(&cfg.darktable.app)
-        };
+        // always on a virtual screen: nothing shows on the owner's desktop, and no mouse pointer
+        // can make darktable act on another photo (journal 2026-11-26)
+        let mut cmd = Command::new("xvfb-run");
+        cmd.args(["-a", "-s", "-screen 0 1600x1000x24", &cfg.darktable.app])
+            .env_remove("WAYLAND_DISPLAY")
+            .env("GDK_BACKEND", "x11");
         let log = std::fs::File::create(work.join("darktable.log"))?;
         cmd.arg("--configdir")
             .arg(&config)
@@ -136,13 +133,16 @@ impl App {
             .stdout(log.try_clone()?)
             .stderr(log)
             .process_group(0);
-        let child = cmd.spawn().with_context(|| {
-            format!(
-                "cannot start {}{}",
-                if headless { "xvfb-run " } else { "" },
-                cfg.darktable.app
-            )
-        })?;
+        let child = match cmd.spawn() {
+            Ok(c) => c,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => bail!(
+                "xvfb-run not found: the self-test runs darktable on a virtual screen (Manjaro: sudo pacman -S xorg-server-xvfb)"
+            ),
+            Err(e) => {
+                return Err(e)
+                    .with_context(|| format!("cannot start xvfb-run {}", cfg.darktable.app));
+            }
+        };
 
         let pgid = child.id();
         std::fs::write(work.join(PID_FILE), pgid.to_string())?;
