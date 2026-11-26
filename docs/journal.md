@@ -1293,3 +1293,28 @@ peak brightness matches the owner's edit. Sheets `photo-edits/_us21/round8/` (co
 - The visible difference to the owner's edits is star **size**: the owner's stars are larger,
   white blobs (high pass and low pass in those edits, little luma denoise), the candidates'
   stars are small points. Current astro practice tends to shrink stars rather than enlarge them.
+- **Owner's verdict on round 8:** Z3 is better than Z, but the owner's own edit is still
+  preferred for _DSC0905 and _DSC0926; the stars as a whole look too dark. Strong star reduction
+  (as in the r/ExposurePorn example) goes too far for the owner's taste; the Milky Way is visible
+  in only a few of the owner's night photos.
+
+### 2026-11-26 — US-21: a modern recipe from scratch, for comparison
+
+Standard steps with defaults and no matching to the owner's edits: raw CA, profiled denoise
+(default), lens, exposure, "clarity" once, color balance rgb "basic colorfulness | standard";
+WB by background neutralization (dark sky slightly cool, R/G 0.95, B/G 1.10) and a fixed sky
+brightness (median 0.12); M1 sigmoid "scene-referred default", M2 AgX punchy. _DSC0905, _DSC0926,
+_DSC4743; sheets `photo-edits/_us21/modern/` (columns: owner's edit, Z of round 6, M1, M2).
+
+| photo | star peak A / Z / M1 / M2 | punch A / Z / M1 / M2 | sky median A / Z / M1 |
+|---|---|---|---|
+| _DSC0905 | 0.76 / 0.44 / 0.45 / 0.46 | 7.1 / 7.7 / 3.8 / 4.0 | 0.11 / 0.06 / 0.12 |
+| _DSC0926 | 0.55 / 0.40 / 0.48 / 0.49 | 7.8 / 12.3 / 4.1 / 4.1 | 0.07 / 0.03 / 0.12 |
+| _DSC4743 | 0.63 / 0.52 / 0.51 / 0.53 | 5.1 / 4.7 / 3.5 / 3.4 | 0.10 / 0.06 / 0.12 |
+
+- The plain modern recipe gives a grey, flat sky with dim stars: its stars are no brighter than
+  Z's, and against the brighter sky they have half the punch.
+- The owner's sky is about as bright as M1's, yet the owner's stars are far brighter (peak 0.76
+  vs 0.45 on _DSC0905) and larger. Neither the modern defaults nor the tuned pipeline get there;
+  the owner's star look comes from display-referred steps (high pass, low pass, curves) that
+  current practice avoids.
