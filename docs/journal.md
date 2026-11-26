@@ -1438,3 +1438,29 @@ linear aurora-check render (lower 25 % vs upper 55 %).
 - **Colour:** the owner's own edits are spread widely (background B/G 0.55–2.13); the owner's
   explicit choices of 2026-11-22 are the clearest reference: neutral blue = R/G 0.95, B/G 1.35
   ("B"), blue-violet = 1.05, 1.50 ("C").
+
+### 2026-11-26 — US-21, round 12: the foreground (brightness and colour, masked below the horizon)
+
+Round 11's G1 (sky median 0.065) plus, masked below the hand-set horizon by a downward gradient:
+H1 a foreground brightness step solved to the owner's foreground median; H2 also a color
+calibration (CAT16) solved to the owner's foreground colour. Sheets
+`photo-edits/_us21/round12/sheet_<photo>.png` (columns: owner's edit, G1, H1, H2; row 3 a
+foreground crop); _DSC0914 has no foreground.
+
+| photo | foreground L A / G1 / H1 / H2 | foreground R/G, B/G A / G1 / H2 | step |
+|---|---|---|---|
+| DSC00461 | 0.115 / 0.109 / 0.116 / 0.119 | 1.09, 0.55 / 1.20, 0.30 / 1.09, 0.54 | +0.10 EV |
+| _DSC0905 | 0.099 / 0.007 / 0.101 / 0.101 | 0.99, 1.07 / 1.49, 3.18 / 0.99, 1.06 | +1.20 EV |
+| _DSC0909 | 0.186 / 0.146 / 0.146 / 0.147 | 0.64, 0.83 / 0.87, 1.20 / 0.82, 1.17 | +2.00 (limit) |
+| _DSC0926 | 0.097 / 0.126 / 0.098 / 0.100 | 0.97, 0.45 / 1.00, 0.34 / 0.97, 0.45 | −0.38 EV |
+| _DSC4743 | 0.101 / 0.241 / 0.103 / 0.093 | 0.99, 1.07 / 0.73, 1.20 / 0.98, 1.08 | −1.25 EV |
+
+- **A second exposure instance can't be used**: it turned the whole image white whatever its
+  value, also without a mask. A second tone equalizer instance with the same gain on every band
+  (no detail preservation) works as a per-pixel exposure and takes the mask.
+- H2 reaches the owner's foreground brightness and colour on four photos: _DSC4743's rocks
+  turn from bright cold-blue to neutral grey, _DSC0926's grass from garish yellow-green to the
+  owner's darker tone, _DSC0905's almost black foreground gets visible.
+- _DSC0909: only a thin strip below the horizon (0.97) — the solvers run into their limits.
+- A brighter foreground lifts the sky near the horizon a little: the local-contrast steps work on
+  neighbourhoods (an extreme +2 EV lifted the sky by up to 15 %).
