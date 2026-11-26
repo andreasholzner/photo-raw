@@ -1403,3 +1403,7 @@ Round 10's F with the exposure solved per photo so that the sky median (upper 55
   0.4–0.7 EV more. Star brightness follows the exposure (G1 dimmest).
 - _DSC4743's foreground (moonlit rocks) stays over-bright and cold even in G1: the sky target
   can't fix the foreground.
+- **Owner's verdict on round 11:** G1 is preferred for more photos than G2, but not for all. The
+  difference between the two is only the exposure module's value (≈ +0.3 EV), which the owner can
+  adjust per photo in darktable (the photo then counts as edited by hand, US-8). → **Sky median
+  0.065 is the default** for the night edit.
