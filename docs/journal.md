@@ -1070,3 +1070,39 @@ On the owner's machine the `@darktable` scenarios failed in ways the container n
   pointer events. Switching the darkroom to the right photo afterwards (`display_image`) loaded
   it, but the following changes didn't land on it. darktable also opens full screen.
   → The self-test always runs darktable on a virtual screen (Xvfb), also on a desktop.
+
+### 2026-11-26 — US-21, round 1: night base candidates
+
+The owner's six favourite night edits (DSC00461, _DSC0905, _DSC0909, _DSC0914, _DSC0926,
+_DSC4743) as column A — as a look reference only. Their look: a dark, almost black, neutral to
+blue sky, many crisp stars, a structured Milky Way, a dark foreground. Candidates start from the
+US-18 aurora base and change one thing each, chosen from current night-photo practice (links:
+"Night (Milky Way, stars) editing"); exposure and WB solved per photo so that the sky median and
+sky-background colour match column A (per display transform).
+
+| | denoise | local contrast | look |
+|---|---|---|---|
+| N1 | US-18: chroma only + non-local means 0.7 | "clarity" twice | sigmoid ACES + vibrant + chroma 0.2 |
+| N2 | as N1 | as N1 + diffuse "dehaze" (Milky Way detail) | as N1 |
+| N3 | as N1 | as N1 | AgX punchy |
+| N4 | astrophoto denoise (defaults) | as N1 | as N1 |
+
+Sheets `photo-edits/_us21/round1/sheet_<photo>.png` (columns A, N1–N4; full frame, sky crop,
+second crop); full-size JPGs and sidecars in `photo-edits/_us21/round1/<folder>/`. Sky noise as in
+US-18 (×1000; in star fields the stars count too, so it reads high):
+
+| photo | A | N1 | N2 | N3 | N4 |
+|---|---|---|---|---|---|
+| DSC00461 | 11.8 | 3.6 | 5.2 | 3.2 | 4.5 |
+| _DSC0905 | 20.9 | 12.1 | 17.8 | 10.5 | 14.2 |
+| _DSC0909 | 32.8 | 20.9 | 30.4 | 17.7 | 23.0 |
+| _DSC0914 | 48.4 | 21.2 | 31.4 | 19.4 | 24.4 |
+| _DSC0926 | 21.5 | 12.0 | 18.3 | 11.5 | 11.9 |
+| _DSC4743 | 12.5 | 12.2 | 21.6 | 11.0 | 17.6 |
+
+- All new columns are cleaner than the owner's edits; diffuse "dehaze" (N2) brings 40–75 % of the
+  noise back for little visible gain at sheet size; astrophoto denoise (N4) leaves coloured
+  blotches; AgX (N3) is the cleanest and a little more neutral.
+- Matching only the sky goes wrong on the foreground: on _DSC4743 the moonlit rocks come out far
+  too bright and cyan (the owner's edit keeps them dark); _DSC0914's sky turns greenish in the
+  sigmoid columns. The foreground needs its own treatment, as for aurora (US-18).
