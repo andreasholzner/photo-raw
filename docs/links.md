@@ -43,3 +43,14 @@ References used in the analysis and planning (see [journal.md](journal.md) for c
 - [Expert Photography: editing Milky Way photos](https://expertphotography.com/post-processing-milky-way-photography-settings-presets)
   — white balance first: near neutral, slightly towards blue/magenta; dehaze with restraint; no
   sharpening
+- [Nature TTL: 5 mistakes to avoid when processing star photos](https://www.naturettl.com/5-mistakes-to-avoid-when-processing-star-photos/)
+- [Fstoppers: 8 steps to better Milky Way editing](https://fstoppers.com/astrophotography/8-steps-better-milky-way-editing-lightroom-515949)
+  — generally no sharpening on Milky Way shots
+- [PetaPixel: 6 editing mistakes in landscape photos (2024)](https://petapixel.com/2024/02/04/6-photo-editing-mistakes-i-wish-i-was-warned-about-earlier)
+  — over-saturation as the most common sky-editing error
+- [Sky at Night: 12 common astrophotography mistakes](https://www.skyatnightmagazine.com/astrophotography/astrophoto-tips/common-mistakes)
+- [Capture the Atlas academy: star reduction](https://academy.capturetheatlas.com/?p=25573)
+  — fewer, smaller stars to let the Milky Way stand out and the sky look less noisy
+- [Reddit r/ExposurePorn: before/after star removal (2025)](https://www.reddit.com/r/ExposurePorn/comments/1l8hqm1/)
+- [AstroBin forum: how far is it acceptable to reduce stars?](https://app.astrobin.com/forum/topic/66598/processing/how-far-is-it-acceptable-to-reduce-stars)
+  — deep-sky view; star reduction is a matter of taste and easily overdone
