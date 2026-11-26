@@ -3,11 +3,10 @@ Feature: US-12 — Panorama sets
   As the owner, I mark panorama sets in darktable, and the tool proposes sets I may have missed.
 
   A panorama set is a tag on its photos, named after the set's first photo, e.g.
-  "photoflow|panorama|_DSC6319"; a photo belongs to one set at most. The tool proposes sets from
-  photos taken in quick succession with the same focal length (in whole millimetres, rounded); a
-  proposal is never stitched until I confirm it (US-13).
-  Exposure brackets taken for a panorama simply belong to its set. The actions below are buttons
-  in the to-do panel (US-14).
+  "photoflow|panorama|_DSC6319". The tool proposes sets from photos taken in quick succession with
+  the same focal length (in whole millimetres, rounded); a proposal is never stitched until I
+  confirm it (US-13). Exposure brackets taken for a panorama simply belong to its set. The actions
+  below are buttons in the to-do panel (US-14).
 
   Rule: I mark panorama sets by hand
 
@@ -15,11 +14,6 @@ Feature: US-12 — Panorama sets
       Given three photos in a folder
       When I select them and mark them as a panorama set
       Then all three carry the set tag named after the first of them
-
-    Scenario: A photo marked again moves to the new set
-      Given two panorama sets in a folder
-      When I select a photo of the first set with the photos of the second and mark them as a set
-      Then the photo belongs only to the second set
 
   Rule: The tool proposes photos taken in quick succession as a set
 
