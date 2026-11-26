@@ -1171,3 +1171,37 @@ measures at 1500 px (`experiments/us21_stars.py`, patch 80 % wide, 5–50 % from
   owner's sky is not darker than T0's at all (dark parts R 0.040, G 0.086, B 0.133): his punch
   comes from brighter stars (high pass, curves lifting the highlights), and his black point
   (levels, 0.004) sits on Lab lightness after the curves.
+
+### 2026-11-26 — US-21, round 4: sky colour and star punch without clipping (_DSC4743 only)
+
+Worked on _DSC4743 alone, step by step with the owner; sheets `photo-edits/_us21/round4/`.
+Measures at 1500 px: dark sky = 10–30 % of the upper sky by brightness, Milky Way glow = 60–80 %
+(below the stars' brightness), stars and punch as in round 2, star saturation = median of
+(max − min) / max over the 300 brightest star cores.
+
+| | punch | star sat. | stars R/G, B/G | dark sky R/G, B/G | glow R/G, B/G |
+|---|---|---|---|---|---|
+| owner's edit | 5.1 | 0.37 | 0.93, 1.44 | 0.47, 1.55 | 0.84, 1.42 |
+| V0 = T3 | 5.1 | | 0.99, 0.98 | green clipped | |
+| V1: no black level, shadows tint | 3.3 | | 0.83, 1.05 | 0.54, 1.60 | 0.64, 1.31 |
+| W1: + highlights tint for the glow | 2.9 | | 1.49, 1.39 | 0.62, 1.64 | 0.88, 1.30 |
+| X1: + midtones tint instead | 3.4 | 0.13 | 0.93, 1.09 | 0.96, 1.93 | 0.84, 1.43 |
+| X2: X1 + tone equalizer + highlights chroma | 5.0 | 0.25 | 0.90, 1.09 | | 0.79, 1.61 |
+
+- **Sky colour by split toning:** WB for neutral stars, then color balance rgb tints solved
+  against the owner's edit: the shadows wheel for the dark sky (V1). The owner then clarified
+  that the dark sky has no colour impression (too dark, which is good); what differs is the
+  **Milky Way band, slightly red/purple in the owner's edit without the stars being affected**.
+- **Tinting only the glow:** the highlights wheel (multiplicative) turned the stars and every
+  bright rock purple (W1, "way too much"); the global offset clips green like the black level;
+  the midtones wheel at a small strength (≈ 0.02) tints the glow and barely the stars (X1) — at
+  0.1 it was unstable. "X1 is much better."
+- **Punch without clipping:** the tone equalizer without detail preservation (per pixel), the
+  bands −8 … −5 EV at −1.2 EV, lowers the sky and the faintest stars by a factor — no channel
+  clips, hues stay (X2: punch 4.9–5.0). Faint stars merge into the background, which the owner
+  accepts.
+- **Star colour:** AgX bleaches bright points (AgX "base": saturation 0.07). Not the chroma
+  denoise (0.13 → 0.14 without it). Color balance rgb highlights chroma 1.0 brings 0.25;
+  sigmoid and AgX "unmodified base primaries" bleach more and lose punch.
+- **Owner's verdict:** go on with X2, tints re-solved with the tone equalizer in place, on all
+  six photos (round 5).
