@@ -1205,3 +1205,28 @@ Measures at 1500 px: dark sky = 10–30 % of the upper sky by brightness, Milky 
   sigmoid and AgX "unmodified base primaries" bleach more and lose punch.
 - **Owner's verdict:** go on with X2, tints re-solved with the tone equalizer in place, on all
   six photos (round 5).
+
+### 2026-11-26 — US-21, round 5: X2 on all six photos
+
+Base: AgX punchy, raw CA, chroma-only + non-local-means 0.7 denoise, "clarity" twice, diffuse
+"local contrast | fine", tone equalizer −1.2 EV on the darkest bands (no detail preservation),
+color balance rgb with highlights chroma 1.0 and the two sky tints (shadows for the dark sky,
+midtones for the Milky Way glow) solved per photo against the owner's edit; WB for neutral stars.
+Sheets `photo-edits/_us21/round5/sheet_<photo>.png` (columns: owner's edit, Y).
+
+| photo | punch A / Y | stars R/G, B/G A / Y | glow R/G, B/G A / Y |
+|---|---|---|---|
+| DSC00461 | 8.0 / 7.3 | 0.91, 0.85 / 1.00, 0.76 | 0.90, 0.87 / 0.91, 0.88 |
+| _DSC0905 | 7.0 / 7.7 | 0.96, 1.08 / 0.96, 0.96 | 0.83, 1.17 / 0.91, 1.15 |
+| _DSC0909 | 9.2 / 7.1 | 0.93, 1.30 / 0.90, 1.10 | 0.89, 1.32 / 0.85, 1.34 |
+| _DSC0914 | 5.8 / 5.7 | 0.97, 1.11 / 0.94, 1.08 | 0.88, 1.21 / 0.90, 1.25 |
+| _DSC0926 | 7.8 / 10.4 | 1.02, 0.93 / 1.01, 0.74 | 0.98, 0.82 / 0.97, 0.78 |
+| _DSC4743 | 5.1 / 5.0 | 0.93, 1.44 / 0.88, 1.10 | 0.84, 1.42 / 0.85, 1.42 |
+
+- Punch at the owner's level on four photos, above on _DSC0926, below on _DSC0909; the glow
+  colour matches everywhere (the tints are small except on _DSC4743).
+- The stars are consistently less blue than the owner's (B/G lower on every photo; yellowish
+  in the _DSC0909 crops); the owner's _DSC0909 also shows a red Milky Way core near the horizon
+  that Y renders grey. Y is overall a little darker.
+- _DSC4743's dark sky ended up violet by the numbers (R/G 1.18, B/G 3.08) — the two tints pull on
+  each other and the solver finished on the glow; at that darkness it shows as near-black.
