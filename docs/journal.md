@@ -1372,3 +1372,8 @@ flags failed on _DSC6299 (bright snow):
   the maximum, even at full size in a linear render — darktable's highlight reconstruction fills
   clipped areas in every render. _DSC6299 probably isn't clipped in the raw at all (its note in
   the reference set refers to the owner's edit).
+- **Owner's verdict on US-21 round 10:** F is better than Z on DSC00461, _DSC0905, _DSC0909 and
+  _DSC0926; on _DSC0914 F is a little too bright but not worse than Z; on _DSC4743 F is much worse
+  and Z was good. Some foregrounds still need work. Reading: the preferred versions have a sky
+  median of about 0.05–0.09; the fixed +0.4 EV pushes _DSC4743 to 0.107 and _DSC0914 to 0.129 →
+  a per-photo sky-brightness target instead of a fixed exposure offset.
