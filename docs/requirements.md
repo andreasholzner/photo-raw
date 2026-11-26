@@ -43,7 +43,7 @@ The stories of a step are worked on in parallel: those that wait for long render
 
 | Step | Rendering-heavy     | Code-only            | Why here                                                                    |
 |------|---------------------|----------------------|-----------------------------------------------------------------------------|
-| 5    | US-23, US-10, US-21 | US-12, US-14         | The aurora and night edits need the horizon line; the panorama sets are used through the to-do panel |
+| 5    | US-23, US-10, US-21 | US-14                | The aurora and night edits need the horizon line; the panorama sets are used through the to-do panel |
 | 6    | US-13, US-11        | US-17, US-16, US-15  | Stitching and the gradient filter (it needs the horizon line too); installation, export and the collection status make it usable day to day |
 | 7    | US-19               |                      | Own edits after a darktable upgrade: needs a darktable release to test against |
 
@@ -66,7 +66,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-9](#us-9--day-auto-edit)                                    | ✅     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
 | [US-10](#us-10--aurora-auto-edit)                               | 🚧     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
 | [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
-| [US-12](#us-12--panorama-sets)                                  | 🚧     | Panorama sets                                  | [Panoramas](#panoramas)                         |
+| [US-12](#us-12--panorama-sets)                                  | ✅     | Panorama sets                                  | [Panoramas](#panoramas)                         |
 | [US-13](#us-13--stitch-panoramas)                               | 📋     | Stitch panoramas                               | [Panoramas](#panoramas)                         |
 | [US-14](#us-14--to-do-panel-in-darktable)                       | 📋     | To-do panel in darktable                       | [darktable integration](#darktable-integration) |
 | [US-15](#us-15--status-across-the-collection)                   | 📋     | Status across the collection                   | [darktable integration](#darktable-integration) |
@@ -332,7 +332,7 @@ the darker target or a stronger luma denoise is better.
 
 ### US-12 — Panorama sets
 
-**In progress 🚧** — As the owner, I mark panorama sets in darktable, and the tool proposes sets I may
+**Done ✅** — As the owner, I mark panorama sets in darktable, and the tool proposes sets I may
 have missed.
 
 **Acceptance criteria:** [us-12-panorama-sets.feature](../features/us-12-panorama-sets.feature)
