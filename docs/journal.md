@@ -1554,3 +1554,19 @@ averaged down to 384×384; (b) 768 px render at 768×512, the photo's aspect kep
   and on _DSC8305 (beside the tent). Reference set: 8 of 14 within 0.05 of the hand lines, median
   0.043 (the hand lines are gradient starts).
 - Cost: 2 small renders and 6 model runs per photo, about 10 s on the CPU.
+
+### 2026-11-27 — US-23: day photos
+
+`photoflow horizon` (the built version of round 3) on 60 random day photos from all years.
+Sheets `photo-edits/_us23/day_sheet_{1,2}.png`, previews in `photo-edits/_us23/day/`.
+
+- All 58 photos with sky get a skyline that follows the land: ridges, peaks, treelines, buildings,
+  cairns, a far shore under a bright sky; lake surfaces and reflections stay land. The two
+  without sky (a door sign, flowers seen from above) report "no sky"; close-ups of rock, faces and
+  climbers in portrait format keep their small patches of sky.
+- Small artefacts on 4: a bare tree and a summit cross count as sky (the skyline runs below thin
+  objects — harmless for a sky mask with a soft edge), and two single columns of false sky (a thin
+  strip beside a face, the left edge of a lake shore).
+- Day photos are easier than night photos: no failures of the kind aurora causes.
+- Time: 18 min for 60 photos with three photos in parallel on 8 cores (about 50 s CPU per photo,
+  most of it darktable-cli's two renders).
