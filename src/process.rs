@@ -13,13 +13,17 @@
 //! darkroom<TAB>0|1
 //! photo<TAB><raw path><TAB><sidecar path><TAB>0|1 (altered)<TAB><tags>
 //! ```
-//! Plan, one or more lines per photo, in this order:
+//! Plan, one or more lines per photo, in this order; a photo is named by its sidecar path, which
+//! tells darktable's duplicates of one raw apart:
 //! ```text
-//! <raw path><TAB>clear            remove the tool's earlier class, open-step and report tags
-//! <raw path><TAB>apply<TAB><xmp>  replace the photo's history with this sidecar's, and remove
-//!                                 the fingerprint tag of the tool's earlier edit
-//! <raw path><TAB>tag<TAB><name>   attach a tag
-//! <raw path><TAB>untag<TAB><prefix>  detach every tag starting with this
+//! <sidecar><TAB>clear            remove the tool's earlier class, open-step and report tags
+//! <sidecar><TAB>apply<TAB><xmp>  replace the photo's history with this sidecar's, and remove
+//!                                the fingerprint tag of the tool's earlier edit
+//! <sidecar><TAB>tag<TAB><name>   attach a tag
+//! <sidecar><TAB>untag<TAB><prefix>  detach every tag starting with this
+//! <sidecar><TAB>duplicate<TAB><xmp><TAB><tags>  make a duplicate with this history and these
+//!                                tags (US-10)
+//! <sidecar><TAB>remove           remove this duplicate from darktable (US-10)
 //! ```
 //! A photo whose edit is already what its switches ask for gets no lines: nothing changes.
 
@@ -62,6 +66,8 @@ pub enum Step {
     Apply(PathBuf),
     Tag(String),
     Untag(String),
+    Duplicate { xmp: PathBuf, tags: Vec<String> },
+    Remove,
 }
 
 /// What a processing run needs besides the hand-over: darktable-cli, the photos' files.
@@ -73,7 +79,14 @@ pub trait Tools {
     fn day_edit(&mut self, p: &Photo, sidecar: &str, wanted: Wanted) -> Result<day_edit::Solved>;
     /// Share of the frame with clipped raw highlights (US-9).
     fn clipped_share(&mut self, p: &Photo) -> Result<f64>;
-    /// Writes an edit for darktable to apply; returns its path.
+    /// Solves the aurora edit in a sky colour by rendering (US-10).
+    fn aurora_edit(
+        &mut self,
+        p: &Photo,
+        sidecar: &str,
+        colour: crate::aurora_edit::SkyColour,
+    ) -> Result<crate::aurora_edit::Solved>;
+    /// Writes an edit for darktable to apply, named after the photo's sidecar; returns its path.
     fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf>;
     /// When and with which focal length the photo was taken (US-12).
     fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture>;
@@ -112,43 +125,145 @@ pub fn parse_handover(text: &str) -> Result<Handover> {
     })
 }
 
-/// The plan for the handed-over photos; each photo is decided on its own, then the photos are
-/// looked at together for panorama proposals (US-12).
+/// The plan for the handed-over photos: each photo is decided on its own (aurora photos with
+/// their night's sky colour), then the photos are looked at together for comparison duplicates
+/// (US-10) and panorama proposals (US-12).
 pub fn plan(handover: &Handover, tools: &mut dyn Tools) -> Vec<(PathBuf, Vec<Step>)> {
-    let mut plan: Vec<(PathBuf, Vec<Step>)> = handover
+    use crate::nights;
+    let captures: Vec<Option<crate::exif::Capture>> = handover
         .photos
         .iter()
-        .map(|p| {
-            let steps = match decide(handover.darkroom_open, p, tools) {
-                Ok(Some(steps)) => steps,
-                Ok(None) => Vec::new(),
-                Err(e) => {
-                    eprintln!("{}: {e:#}", p.raw.display());
-                    vec![
-                        Step::Clear,
-                        Step::Tag(format!("{LEFT_TAG}could not be processed")),
-                    ]
-                }
-            };
-            (p.raw.clone(), steps)
-        })
+        .map(|p| tools.capture(p).ok())
         .collect();
+    let night_of: Vec<Option<i64>> = captures
+        .iter()
+        .map(|c| c.map(|c| nights::night(c.time)))
+        .collect();
+    let choice_of = |night: Option<i64>| -> nights::Choice {
+        nights::choice(
+            handover
+                .photos
+                .iter()
+                .zip(&night_of)
+                .filter(|(_, n)| night.is_some() && **n == night)
+                .map(|(p, _)| &p.tags),
+        )
+    };
+    let mut aurora_originals = Vec::new();
+    let mut plan: Vec<(PathBuf, Vec<Step>)> = Vec::new();
+    for (i, p) in handover.photos.iter().enumerate() {
+        let mut aurora = false;
+        let choice = choice_of(night_of[i]);
+        let steps = match decide(handover.darkroom_open, p, tools, choice, &mut aurora) {
+            Ok(Some(steps)) => steps,
+            Ok(None) => Vec::new(),
+            Err(e) => {
+                eprintln!("{}: {e:#}", p.raw.display());
+                vec![
+                    Step::Clear,
+                    Step::Tag(format!("{LEFT_TAG}could not be processed")),
+                ]
+            }
+        };
+        if aurora {
+            aurora_originals.push(i);
+        }
+        plan.push((p.sidecar.clone(), steps));
+    }
     if !handover.darkroom_open {
-        propose_panoramas(handover, tools, &mut plan);
+        compare_colours(
+            handover,
+            tools,
+            &captures,
+            &night_of,
+            &aurora_originals,
+            &mut plan,
+        );
+        propose_panoramas(handover, &captures, &mut plan);
     }
     plan
+}
+
+/// Comparison duplicates in the other colour for undecided nights (US-10).
+fn compare_colours(
+    handover: &Handover,
+    tools: &mut dyn Tools,
+    captures: &[Option<crate::exif::Capture>],
+    night_of: &[Option<i64>],
+    aurora_originals: &[usize],
+    plan: &mut [(PathBuf, Vec<Step>)],
+) {
+    use crate::nights;
+    let mut keys: Vec<i64> = aurora_originals
+        .iter()
+        .filter_map(|&i| night_of[i])
+        .collect();
+    keys.sort();
+    keys.dedup();
+    for key in keys {
+        let mut photos: Vec<usize> = aurora_originals
+            .iter()
+            .copied()
+            .filter(|&i| night_of[i] == Some(key))
+            .collect();
+        let choice = nights::choice(photos.iter().map(|&i| &handover.photos[i].tags));
+        if choice != nights::Choice::Undecided {
+            continue;
+        }
+        photos.sort_by(|&a, &b| {
+            let t = |i: usize| captures[i].map_or(0.0, |c| c.time);
+            t(a).total_cmp(&t(b))
+                .then_with(|| handover.photos[a].raw.cmp(&handover.photos[b].raw))
+        });
+        for k in nights::comparisons(photos.len()) {
+            let i = photos[k];
+            let p = &handover.photos[i];
+            if p.tags.iter().any(|t| t == nights::COMPARED_TAG) {
+                continue;
+            }
+            let other = nights::photo_colour(&p.tags, choice).other();
+            let result = (|| -> Result<Step> {
+                let text = tools.sidecar_text(p)?;
+                let solved = tools.aurora_edit(p, &text, other)?;
+                let dup = Photo {
+                    sidecar: p.sidecar.with_extension("comparison.xmp"),
+                    ..p.clone()
+                };
+                let xmp = tools.write_edit(&dup, &solved.xmp)?;
+                Ok(Step::Duplicate {
+                    xmp,
+                    tags: vec![
+                        format!("{CLASS_TAG}aurora"),
+                        format!("{}{}", nights::SKY_TAG, other.name()),
+                        format!("{}{}", nights::COMPARISON_TAG, other.name()),
+                        edit_tag(&sidecar::parse(&solved.xmp)?),
+                    ],
+                })
+            })();
+            match result {
+                Ok(step) => {
+                    plan[i].1.push(step);
+                    plan[i].1.push(Step::Tag(nights::COMPARED_TAG.to_string()));
+                }
+                Err(e) => eprintln!("{}: comparison: {e:#}", p.raw.display()),
+            }
+        }
+    }
 }
 
 /// Proposes panorama sets among the handed-over photos and replaces their earlier proposals.
 fn propose_panoramas(
     handover: &Handover,
-    tools: &mut dyn Tools,
+    captures: &[Option<crate::exif::Capture>],
     plan: &mut [(PathBuf, Vec<Step>)],
 ) {
     use crate::panorama::{self, Shot};
     let mut shots = Vec::new();
-    for p in &handover.photos {
-        let capture = tools.capture(p).ok();
+    for (i, (p, capture)) in handover.photos.iter().zip(captures).enumerate() {
+        let capture = *capture;
+        // darktable's duplicates of a raw count once, as the first of them (US-10)
+        let duplicate = handover.photos[..i].iter().any(|q| q.raw == p.raw)
+            || plan[i].1.contains(&Step::Remove);
         shots.push(Shot {
             name: p
                 .raw
@@ -158,7 +273,7 @@ fn propose_panoramas(
                 .to_string(),
             time: capture.map_or(f64::NAN, |c| c.time),
             focal_mm: capture.and_then(|c| c.focal_mm),
-            excluded: capture.is_none() || panorama::excluded(&p.tags),
+            excluded: capture.is_none() || duplicate || panorama::excluded(&p.tags),
         });
     }
     let open = format!("{OPEN_TAG}{}", panorama::OPEN_STEP);
@@ -182,7 +297,13 @@ fn propose_panoramas(
 }
 
 /// The steps for one photo; `None`: its edit is already right, nothing changes.
-fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Option<Vec<Step>>> {
+fn decide(
+    darkroom_open: bool,
+    p: &Photo,
+    tools: &mut dyn Tools,
+    night: crate::nights::Choice,
+    aurora_original: &mut bool,
+) -> Result<Option<Vec<Step>>> {
     let library = LibraryState {
         is_altered: p.altered,
         tags: p.tags.clone(),
@@ -212,9 +333,12 @@ fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Optio
             ]));
         }
     };
+    if class == "aurora" {
+        return decide_aurora(p, tools, &state, &history, night, aurora_original);
+    }
     let mut steps = vec![Step::Clear, tag(format!("{CLASS_TAG}{class}"))];
     if class != "day" {
-        // the night and aurora edits come with US-10 and US-21
+        // the night edit comes with US-21
         return Ok(Some(steps));
     }
 
@@ -256,6 +380,68 @@ fn decide(darkroom_open: bool, p: &Photo, tools: &mut dyn Tools) -> Result<Optio
     Ok(Some(steps))
 }
 
+/// The steps for an aurora photo (US-10): a comparison duplicate goes once its night is decided,
+/// an original gets the aurora edit in its sky colour unless its edit already has it.
+fn decide_aurora(
+    p: &Photo,
+    tools: &mut dyn Tools,
+    state: &EditState,
+    history: &sidecar::History,
+    night: crate::nights::Choice,
+    aurora_original: &mut bool,
+) -> Result<Option<Vec<Step>>> {
+    use crate::nights::{self, Choice};
+    let _ = history;
+    let tag = |t: String| Step::Tag(t);
+    let question = format!("{OPEN_TAG}{}", nights::QUESTION);
+    let decided = matches!(night, Choice::Chosen(_));
+    if p.tags.iter().any(|t| t.starts_with(nights::COMPARISON_TAG)) {
+        // a comparison duplicate the owner hasn't changed (a changed one is left alone above)
+        return Ok(if decided {
+            Some(vec![Step::Remove])
+        } else {
+            None
+        });
+    }
+    *aurora_original = true;
+    let colour = nights::photo_colour(&p.tags, night);
+    let sky = format!("{}{}", nights::SKY_TAG, colour.name());
+    let mut night_tags = Vec::new();
+    if decided {
+        night_tags.push(Step::Untag(nights::COMPARED_TAG.to_string()));
+    }
+    if *state == EditState::OwnEdit && p.tags.contains(&sky) {
+        // the edit stays; only the night's question may change
+        let mut steps = night_tags;
+        if decided {
+            steps.push(Step::Untag(question));
+        } else {
+            steps.push(tag(question));
+        }
+        return Ok(Some(steps));
+    }
+    let mut steps = vec![Step::Clear, tag(format!("{CLASS_TAG}aurora"))];
+    if let Some(why) = tools.edits_blocked()? {
+        steps.push(tag(format!("{LEFT_TAG}{why}")));
+        return Ok(Some(steps));
+    }
+    let text = tools.sidecar_text(p)?;
+    let solved = tools.aurora_edit(p, &text, colour)?;
+    let path = tools.write_edit(p, &solved.xmp)?;
+    steps.insert(1, Step::Apply(path));
+    steps.push(Step::Untag(nights::SKY_TAG.to_string()));
+    steps.push(tag(sky));
+    steps.push(tag(edit_tag(&sidecar::parse(&solved.xmp)?)));
+    steps.extend(night_tags);
+    if !decided {
+        steps.push(tag(question));
+    }
+    if !solved.reached {
+        steps.push(tag(format!("{OPEN_TAG}{CHECK_EXPOSURE}")));
+    }
+    Ok(Some(steps))
+}
+
 pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
     let mut out = String::new();
     for (raw, steps) in plan {
@@ -266,6 +452,12 @@ pub fn format_plan(plan: &[(PathBuf, Vec<Step>)]) -> String {
                 Step::Apply(x) => out.push_str(&format!("{raw}\tapply\t{}\n", x.display())),
                 Step::Tag(t) => out.push_str(&format!("{raw}\ttag\t{t}\n")),
                 Step::Untag(t) => out.push_str(&format!("{raw}\tuntag\t{t}\n")),
+                Step::Duplicate { xmp, tags } => out.push_str(&format!(
+                    "{raw}\tduplicate\t{}\t{}\n",
+                    xmp.display(),
+                    tags.join("\u{1f}")
+                )),
+                Step::Remove => out.push_str(&format!("{raw}\tremove\n")),
             }
         }
     }
@@ -290,6 +482,9 @@ pub struct RealTools<'a> {
     pub work: PathBuf,
     dt: Option<crate::darktable::Darktable>,
     check: Option<classify::AuroraCheck>,
+    horizon: Option<crate::horizon::Finder>,
+    /// Per raw: its skyline and scene ratio, found once for both sky colours (US-10).
+    aurora: std::collections::HashMap<PathBuf, (crate::horizon::Skyline, f64)>,
 }
 
 impl<'a> RealTools<'a> {
@@ -299,7 +494,47 @@ impl<'a> RealTools<'a> {
             work: cfg.data_dir()?.join("process"),
             dt: None,
             check: None,
+            horizon: None,
+            aurora: Default::default(),
         })
+    }
+
+    fn aurora_check(&mut self) -> Result<&classify::AuroraCheck> {
+        if self.check.is_none() {
+            let dt = crate::darktable::Darktable::prepare(
+                &self.cfg.darktable.cli,
+                &self.cfg.darktable_config_dir()?,
+                &self.work.join("aurora-check"),
+            )?;
+            self.check = Some(classify::AuroraCheck::new(
+                dt,
+                &self.work.join("aurora-renders"),
+            )?);
+        }
+        Ok(self.check.as_ref().unwrap())
+    }
+
+    /// The photo's skyline and scene ratio (US-23, US-10).
+    fn aurora_scene(&mut self, raw: &Path) -> Result<(crate::horizon::Skyline, f64)> {
+        if let Some(v) = self.aurora.get(raw) {
+            return Ok(v.clone());
+        }
+        if self.horizon.is_none() {
+            let dt = crate::darktable::Darktable::prepare(
+                &self.cfg.darktable.cli,
+                &self.cfg.darktable_config_dir()?,
+                &self.work.join("horizon"),
+            )?;
+            self.horizon = Some(crate::horizon::Finder::new(
+                dt,
+                &self.work.join("horizon-renders"),
+                &self.cfg.data_dir()?.join("models"),
+            )?);
+        }
+        let (line, _) = self.horizon.as_ref().unwrap().find(raw)?;
+        let ratio = crate::aurora_edit::scene_ratio(&self.aurora_check()?.render(raw)?);
+        self.aurora.insert(raw.to_path_buf(), (line.clone(), ratio));
+        Ok((line, ratio))
     }
 
     fn darktable(&mut self) -> Result<&crate::darktable::Darktable> {
@@ -314,6 +549,16 @@ impl<'a> RealTools<'a> {
     }
 
     fn render_edit(&mut self, raw: &Path, xmp: &str) -> Result<crate::aurora::Image> {
+        self.render_at(raw, xmp, "day", day_edit::RENDER_SIZE)
+    }
+
+    fn render_at(
+        &mut self,
+        raw: &Path,
+        xmp: &str,
+        kind: &str,
+        size: u32,
+    ) -> Result<crate::aurora::Image> {
         let dir = self.work.join("renders");
         std::fs::create_dir_all(&dir)?;
         let name = raw
@@ -321,11 +566,10 @@ impl<'a> RealTools<'a> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let x = dir.join(format!("{name}.day.xmp"));
-        let o = dir.join(format!("{name}.day.pfm"));
+        let x = dir.join(format!("{name}.{kind}.xmp"));
+        let o = dir.join(format!("{name}.{kind}.pfm"));
         std::fs::write(&x, xmp)?;
-        self.darktable()?
-            .render(raw, &x, &o, day_edit::RENDER_SIZE)?;
+        self.darktable()?.render(raw, &x, &o, size)?;
         crate::aurora::load_pfm(&o)
     }
 }
@@ -333,16 +577,8 @@ impl<'a> RealTools<'a> {
 impl Tools for RealTools<'_> {
     fn classify(&mut self, p: &Photo) -> Result<Class> {
         let exposure = crate::exif::read(&p.raw)?;
-        if self.check.is_none() && crate::scene::classify(&exposure) == crate::scene::Scene::Night {
-            let dt = crate::darktable::Darktable::prepare(
-                &self.cfg.darktable.cli,
-                &self.cfg.darktable_config_dir()?,
-                &self.work.join("aurora-check"),
-            )?;
-            self.check = Some(classify::AuroraCheck::new(
-                dt,
-                &self.work.join("aurora-renders"),
-            )?);
+        if crate::scene::classify(&exposure) == crate::scene::Scene::Night {
+            self.aurora_check()?;
         }
         let check = self.check.as_ref();
         classify::classify(&exposure, || {
@@ -360,6 +596,23 @@ impl Tools for RealTools<'_> {
     fn day_edit(&mut self, p: &Photo, sidecar: &str, wanted: Wanted) -> Result<day_edit::Solved> {
         let raw = p.raw.clone();
         day_edit::solve(sidecar, wanted, |xmp| self.render_edit(&raw, xmp))
+    }
+
+    fn aurora_edit(
+        &mut self,
+        p: &Photo,
+        sidecar: &str,
+        colour: crate::aurora_edit::SkyColour,
+    ) -> Result<crate::aurora_edit::Solved> {
+        let raw = p.raw.clone();
+        let (line, ratio) = self.aurora_scene(&raw)?;
+        crate::aurora_edit::solve(
+            sidecar,
+            colour,
+            crate::aurora_edit::sky_target(ratio),
+            Some(&line),
+            &mut |xmp| self.render_at(&raw, xmp, "aurora", crate::aurora_edit::RENDER_SIZE),
+        )
     }
 
     fn clipped_share(&mut self, p: &Photo) -> Result<f64> {
@@ -383,12 +636,12 @@ impl Tools for RealTools<'_> {
         let dir = self.work.join("edits");
         std::fs::create_dir_all(&dir)?;
         let name = p
-            .raw
+            .sidecar
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let path = dir.join(format!("{name}.xmp"));
+        let path = dir.join(name);
         std::fs::write(&path, xmp)?;
         Ok(path)
     }
@@ -444,6 +697,27 @@ mod tests {
         }
     }
 
+    /// An aurora edit without rendering: fixed exposure and white balance, no land.
+    fn aurora_solved(
+        sidecar: &str,
+        colour: crate::aurora_edit::SkyColour,
+    ) -> Result<crate::aurora_edit::Solved> {
+        let params = crate::aurora_edit::Params {
+            ev: 1.0,
+            wb: if colour == crate::aurora_edit::SkyColour::NeutralBlue {
+                (2.4, 2.0)
+            } else {
+                (2.6, 2.2)
+            },
+            land: None,
+        };
+        Ok(crate::aurora_edit::Solved {
+            xmp: crate::aurora_edit::build(sidecar, &params)?,
+            params,
+            reached: true,
+        })
+    }
+
     const IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <rdf:Description xmlns:darktable="http://darktable.sf.net/" darktable:history_end="1" darktable:iop_order_version="4">
@@ -473,6 +747,14 @@ mod tests {
         }
         fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
             Ok(if self.reached { 0.0 } else { 0.01 })
+        }
+        fn aurora_edit(
+            &mut self,
+            _: &Photo,
+            sidecar: &str,
+            colour: crate::aurora_edit::SkyColour,
+        ) -> Result<crate::aurora_edit::Solved> {
+            aurora_solved(sidecar, colour)
         }
         fn write_edit(&mut self, p: &Photo, _: &str) -> Result<PathBuf> {
             Ok(p.raw.with_extension("edit.xmp"))
@@ -532,8 +814,224 @@ mod tests {
         );
         assert_eq!(
             format_plan(&p),
-            "/p/a.ARW\tclear\n/p/a.ARW\ttag\tphotoflow|class|night\n\
-             /p/b.ARW\tclear\n/p/b.ARW\ttag\tphotoflow|open|day or night?\n"
+            "/p/a.ARW.xmp\tclear\n/p/a.ARW.xmp\ttag\tphotoflow|class|night\n\
+             /p/b.ARW.xmp\tclear\n/p/b.ARW.xmp\ttag\tphotoflow|open|day or night?\n"
+        );
+    }
+
+    /// Aurora photos taken a minute apart on one night (file names "/n/<minute>.ARW").
+    struct Night {
+        /// The sidecar text per photo (an import, or the tool's edit).
+        sidecars: std::collections::HashMap<PathBuf, String>,
+        solved: Vec<(PathBuf, crate::aurora_edit::SkyColour)>,
+    }
+
+    impl Tools for Night {
+        fn classify(&mut self, _: &Photo) -> Result<Class> {
+            Ok(Class::Aurora)
+        }
+        fn sidecar_text(&mut self, p: &Photo) -> Result<String> {
+            Ok(self
+                .sidecars
+                .get(&p.sidecar)
+                .cloned()
+                .unwrap_or_else(|| AURORA_IMPORT.to_string()))
+        }
+        fn day_edit(&mut self, _: &Photo, _: &str, _: Wanted) -> Result<day_edit::Solved> {
+            unreachable!()
+        }
+        fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
+            unreachable!()
+        }
+        fn aurora_edit(
+            &mut self,
+            p: &Photo,
+            sidecar: &str,
+            colour: crate::aurora_edit::SkyColour,
+        ) -> Result<crate::aurora_edit::Solved> {
+            self.solved.push((p.sidecar.clone(), colour));
+            aurora_solved(sidecar, colour)
+        }
+        fn write_edit(&mut self, p: &Photo, _: &str) -> Result<PathBuf> {
+            Ok(p.sidecar.with_extension("edit.xmp"))
+        }
+        fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture> {
+            let minute: f64 = p.raw.file_stem().unwrap().to_str().unwrap().parse()?;
+            Ok(crate::exif::Capture {
+                time: 86400.0 * 20000.0 + 22.0 * 3600.0 + 60.0 * minute,
+                focal_mm: Some(14.0 + minute), // no panorama proposals
+            })
+        }
+        fn edits_blocked(&mut self) -> Result<Option<String>> {
+            Ok(None)
+        }
+    }
+
+    const AURORA_IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description xmlns:darktable="http://darktable.sf.net/" darktable:history_end="1" darktable:iop_order_version="4">
+<darktable:history><rdf:Seq>
+<rdf:li darktable:num="0" darktable:operation="temperature" darktable:enabled="1" darktable:modversion="4" darktable:params="0000004000000040000000400000000004000000" darktable:multi_name="" darktable:multi_priority="0"/>
+</rdf:Seq></darktable:history></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+
+    fn night_handover(photos: &[(&str, bool, Vec<String>)]) -> Handover {
+        let lines: Vec<String> = photos
+            .iter()
+            .map(|(raw, altered, tags)| {
+                let t: Vec<&str> = tags.iter().map(String::as_str).collect();
+                photo(raw, *altered, &t)
+            })
+            .collect();
+        parse_handover(&format!("darkroom\t0\n{}\n", lines.join("\n"))).unwrap()
+    }
+
+    fn step_tags(steps: &[Step]) -> Vec<&str> {
+        steps
+            .iter()
+            .filter_map(|s| match s {
+                Step::Tag(t) => Some(t.as_str()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn an_undecided_night_gets_neutral_blue_a_question_and_comparisons() {
+        let h = night_handover(&[
+            ("/n/1.ARW", false, vec![]),
+            ("/n/2.ARW", false, vec![]),
+            ("/n/3.ARW", false, vec![]),
+            ("/n/4.ARW", false, vec![]),
+            ("/n/5.ARW", false, vec![]),
+        ]);
+        let mut tools = Night {
+            sidecars: Default::default(),
+            solved: Vec::new(),
+        };
+        let p = plan(&h, &mut tools);
+        for (_, steps) in &p {
+            let t = step_tags(steps);
+            assert!(t.contains(&"photoflow|class|aurora"));
+            assert!(t.contains(&"photoflow|sky|neutral blue"));
+            assert!(t.contains(&"photoflow|open|sky colour: neutral or violet?"));
+            assert!(steps.iter().any(|s| matches!(s, Step::Apply(_))));
+        }
+        let dup: Vec<usize> = p
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, s))| s.iter().any(|s| matches!(s, Step::Duplicate { .. })))
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(dup, vec![0, 2, 4]);
+        let Some(Step::Duplicate { tags, .. }) =
+            p[2].1.iter().find(|s| matches!(s, Step::Duplicate { .. }))
+        else {
+            unreachable!()
+        };
+        assert!(tags.contains(&"photoflow|comparison|blue-violet".to_string()));
+        assert!(
+            tags.iter()
+                .any(|t| t.starts_with(crate::edit_state::EDIT_TAG_PREFIX))
+        );
+        assert!(step_tags(&p[2].1).contains(&"photoflow|compared"));
+    }
+
+    #[test]
+    fn choosing_the_nights_colour_redoes_the_edits_and_removes_unchanged_comparisons() {
+        use crate::aurora_edit::SkyColour;
+        // the tool's earlier run: neutral edits, a comparison duplicate of photo 1
+        let neutral = aurora_solved(AURORA_IMPORT, SkyColour::NeutralBlue)
+            .unwrap()
+            .xmp;
+        let violet = aurora_solved(AURORA_IMPORT, SkyColour::BlueViolet)
+            .unwrap()
+            .xmp;
+        let fp = |x: &str| edit_tag(&sidecar::parse(x).unwrap());
+        let own = |extra: &[&str]| {
+            let mut t = vec![
+                "photoflow|class|aurora".to_string(),
+                "photoflow|sky|neutral blue".to_string(),
+                "photoflow|open|sky colour: neutral or violet?".to_string(),
+                fp(&neutral),
+            ];
+            t.extend(extra.iter().map(|s| s.to_string()));
+            t
+        };
+        let dup_tags = vec![
+            "photoflow|class|aurora".to_string(),
+            "photoflow|sky|blue-violet".to_string(),
+            "photoflow|comparison|blue-violet".to_string(),
+            fp(&violet),
+        ];
+        let mut h = night_handover(&[
+            (
+                "/n/1.ARW",
+                true,
+                own(&["photoflow|compared", "photoflow|night colour|violet"]),
+            ),
+            ("/n/2.ARW", true, own(&[])),
+        ]);
+        // darktable's duplicate: the same raw, its own sidecar
+        h.photos.push(Photo {
+            raw: PathBuf::from("/n/1.ARW"),
+            sidecar: PathBuf::from("/n/1_01.ARW.xmp"),
+            altered: true,
+            tags: dup_tags,
+        });
+        let mut sidecars = std::collections::HashMap::new();
+        sidecars.insert(PathBuf::from("/n/1.ARW.xmp"), neutral.clone());
+        sidecars.insert(PathBuf::from("/n/2.ARW.xmp"), neutral.clone());
+        sidecars.insert(PathBuf::from("/n/1_01.ARW.xmp"), violet.clone());
+        let mut tools = Night {
+            sidecars,
+            solved: Vec::new(),
+        };
+        let p = plan(&h, &mut tools);
+        for (_, steps) in &p[..2] {
+            assert!(step_tags(steps).contains(&"photoflow|sky|blue-violet"));
+            assert!(!step_tags(steps).contains(&"photoflow|open|sky colour: neutral or violet?"));
+            assert!(steps.contains(&Step::Clear)); // the question goes with the other open steps
+        }
+        assert_eq!(p[2].1, vec![Step::Remove]);
+        assert!(
+            tools
+                .solved
+                .iter()
+                .all(|(_, c)| *c == SkyColour::BlueViolet)
+        );
+        assert!(
+            !p.iter()
+                .any(|(_, s)| s.iter().any(|s| matches!(s, Step::Duplicate { .. })))
+        );
+    }
+
+    #[test]
+    fn a_photo_already_in_its_colour_isnt_edited_again() {
+        use crate::aurora_edit::SkyColour;
+        let neutral = aurora_solved(AURORA_IMPORT, SkyColour::NeutralBlue)
+            .unwrap()
+            .xmp;
+        let tags = vec![
+            "photoflow|class|aurora".to_string(),
+            "photoflow|sky|neutral blue".to_string(),
+            "photoflow|compared".to_string(),
+            "photoflow|open|sky colour: neutral or violet?".to_string(),
+            edit_tag(&sidecar::parse(&neutral).unwrap()),
+        ];
+        let h = night_handover(&[("/n/1.ARW", true, tags)]);
+        let mut sidecars = std::collections::HashMap::new();
+        sidecars.insert(PathBuf::from("/n/1.ARW.xmp"), neutral);
+        let mut tools = Night {
+            sidecars,
+            solved: Vec::new(),
+        };
+        let p = plan(&h, &mut tools);
+        assert!(tools.solved.is_empty());
+        assert!(
+            !p[0]
+                .1
+                .iter()
+                .any(|s| matches!(s, Step::Apply(_) | Step::Duplicate { .. }))
         );
     }
 
@@ -610,6 +1108,14 @@ mod tests {
             }
             fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {
                 panic!("re-edited")
+            }
+            fn aurora_edit(
+                &mut self,
+                _: &Photo,
+                _: &str,
+                _: crate::aurora_edit::SkyColour,
+            ) -> Result<crate::aurora_edit::Solved> {
+                unreachable!()
             }
             fn capture(&mut self, _: &Photo) -> Result<crate::exif::Capture> {
                 bail!("no capture time")
@@ -708,6 +1214,14 @@ mod tests {
             }
             fn edits_blocked(&mut self) -> Result<Option<String>> {
                 Ok(None)
+            }
+            fn aurora_edit(
+                &mut self,
+                _: &Photo,
+                _: &str,
+                _: crate::aurora_edit::SkyColour,
+            ) -> Result<crate::aurora_edit::Solved> {
+                unreachable!()
             }
             fn capture(&mut self, p: &Photo) -> Result<crate::exif::Capture> {
                 let t = match p.raw.file_stem().unwrap().to_str().unwrap() {

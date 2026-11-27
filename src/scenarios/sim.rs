@@ -242,6 +242,14 @@ impl process::Tools for SimTools {
     fn clipped_share(&mut self, _: &process::Photo) -> Result<f64> {
         Ok(0.0)
     }
+    fn aurora_edit(
+        &mut self,
+        _: &process::Photo,
+        _: &str,
+        _: crate::aurora_edit::SkyColour,
+    ) -> Result<crate::aurora_edit::Solved> {
+        anyhow::bail!("aurora photos aren't simulated")
+    }
     fn write_edit(&mut self, p: &process::Photo, xmp: &str) -> Result<PathBuf> {
         let path = p.raw.with_extension("edit.xmp");
         self.written.insert(path.clone(), xmp.to_string());
@@ -306,7 +314,12 @@ impl Sim {
                 .collect(),
             written: Default::default(),
         };
-        for (raw, steps) in process::plan(&handover, &mut tools) {
+        for (sidecar, steps) in process::plan(&handover, &mut tools) {
+            let raw = photos
+                .iter()
+                .find(|r| r.with_extension("ARW.xmp") == sidecar)
+                .cloned()
+                .expect("a handed-over photo");
             let photo = &mut self.library.iter_mut().find(|(r, _)| *r == raw).unwrap().1;
             for s in steps {
                 let tags = &mut photo.library.tags;
@@ -325,6 +338,9 @@ impl Sim {
                         }
                     }
                     Step::Untag(prefix) => tags.retain(|t| !t.starts_with(&prefix)),
+                    Step::Duplicate { .. } | Step::Remove => {
+                        unreachable!("aurora photos aren't simulated")
+                    }
                 }
             }
         }

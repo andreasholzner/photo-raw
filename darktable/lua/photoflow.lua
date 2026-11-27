@@ -74,10 +74,10 @@ local function refresh_sidecars(images)
   return bad
 end
 
-local function apply_plan(text, by_path)
+local function apply_plan(text, by_sidecar)
   for line in text:gmatch("[^\n]+") do
-    local raw, action, arg = line:match("^([^\t]*)\t([^\t]*)\t?(.*)$")
-    local img = by_path[raw]
+    local key, action, arg = line:match("^([^\t]*)\t([^\t]*)\t?(.*)$")
+    local img = by_sidecar[key]
     if img and action == "clear" then
       for _, t in ipairs(img:get_tags()) do
         for _, p in ipairs(CLEARED) do
@@ -96,13 +96,22 @@ local function apply_plan(text, by_path)
       for _, t in ipairs(img:get_tags()) do
         if has_prefix(t.name, arg) then img:detach_tag(t) end
       end
+    elseif img and action == "duplicate" then
+      -- a comparison duplicate (US-10): the tool's edit in the other sky colour
+      local xmp, tags = arg:match("^([^\t]*)\t?(.*)$")
+      local dup = dt.database.duplicate(img)
+      dup:apply_sidecar(xmp)
+      for t in tags:gmatch("[^\31]+") do dup:attach_tag(dt.tags.create(t)) end
+    elseif img and action == "remove" then
+      -- only the tool's own comparison duplicates, unchanged (US-10); never an original
+      if img.duplicate_index > 0 then dt.database.delete(img) end
     end
   end
 end
 
 local function run(images, job)
-  local by_path = {}
-  for _, img in ipairs(images) do by_path[raw_path(img)] = img end
+  local by_sidecar = {}
+  for _, img in ipairs(images) do by_sidecar[img.sidecar] = img end
   local bad = refresh_sidecars(images)
   if job.valid then job.percent = 0.3 end
 
@@ -133,7 +142,7 @@ local function run(images, job)
     error("photoflow process failed (exit " .. tostring(rc) .. "), see " ..
       dt.configuration.tmp_dir .. "/photoflow.log")
   end
-  apply_plan(text, by_path)
+  apply_plan(text, by_sidecar)
 end
 
 local queue = {}
