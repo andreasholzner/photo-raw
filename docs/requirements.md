@@ -290,8 +290,11 @@ single photos with the exposure slider. The self-test checks the tool's edits of
 set's night photos like the day edits, and the upgrade block of US-9 applies.
 
 **Notes:** The look to aim for is the owner's edits of DSC00461 (2018), _DSC0905, _DSC0909,
-_DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The
-foreground targets came from those edits; a rule for photos without such an edit is still open.
+_DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The foreground targets came from those edits. Without the owner's edit of a photo, the sky
+tints aim at the median of the six favourite edits, and the foreground gets a brightness of 0.10
+and a colour correction to neutral (journal 2026-11-27, round 13: K1). A "night" photo with a
+bright sky (blue hour, twilight) gets no automatic edit but the open step "night: check look"
+(owner, 2026-11-27); light pollution near the horizon stays with the owner.
 The horizon line comes from US-23. A daytime long exposure with an ND filter counts as night by its
 exposure (US-7); the owner edits those rare photos by hand.
 

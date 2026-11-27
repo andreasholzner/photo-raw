@@ -1597,3 +1597,5 @@ owner's edit, G without a foreground step, K1, K2).
 - _DSC4450 is a blue-hour scene that counts as night by its exposure (16 s): the night edit's
   sky target darkens it to black. Night photos with a bright sky need a rule.
 - _DSC3050, _DSC3884, _DSC7298 failed in the solvers (division by zero on very dark renders).
+- **Owner's verdict:** K1. A night photo with a bright sky gets the open step "night: check look"
+  instead of an automatic edit; light pollution stays with the owner.
