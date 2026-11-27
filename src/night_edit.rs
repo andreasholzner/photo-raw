@@ -50,11 +50,10 @@ const LOOK: Look = Look {
 /// The tool's masks (ids in the template).
 const SKY_PATH: &str = "1710017177";
 const LAND_PATH: &str = "1810017177";
-/// The masks' edges: the skyline is accurate to about 1 % of the frame. The sky's mask reaches
-/// that far into the land and the land's starts that far below the skyline, so no strip is left
-/// out and the land's brightness step never spills into the sky (a darker or lighter seam).
-const OVERLAP: f32 = 0.01;
-const FEATHER: f32 = 0.005;
+/// The masks cross-fade below the skyline (accurate to about 1 % of the frame): the sky's fades
+/// out over this band, the land's fades in over the same band. Hard or overlapping edges left
+/// seams along distant ridges where the land's step is large (journal 2026-11-27).
+const FADE: f32 = 0.012;
 /// color balance rgb: chroma and hue (degrees) of the shadows and midtones wheels (float indices).
 const SHADOWS_C: usize = 1;
 const MIDTONES_C: usize = 4;
@@ -120,14 +119,14 @@ pub fn build(sidecar_text: &str, params: &Params) -> Result<String> {
     }
     let mut shapes = vec![Shape {
         id: SKY_PATH,
-        points: crate::look_edit::sky_path(&params.skyline, -OVERLAP),
-        border: FEATHER,
+        points: crate::look_edit::sky_path(&params.skyline, 0.0),
+        border: FADE,
     }];
     if params.land.is_some() {
         shapes.push(Shape {
             id: LAND_PATH,
-            points: crate::look_edit::land_path(&params.skyline, OVERLAP + FEATHER),
-            border: FEATHER,
+            points: crate::look_edit::land_path(&params.skyline, FADE),
+            border: FADE,
         });
     }
     LOOK.append(sidecar_text, params.wb, params.ev, steps, &shapes)

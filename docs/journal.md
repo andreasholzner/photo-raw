@@ -1618,6 +1618,7 @@ checks in the job's work folder.
   if that edge is clearly stronger (1.5×) than at the model's point; a run of at most 8 % of the
   width at the frame's side whose skyline drops by more than 0.15 takes its neighbour's value.
   Snapping up to 2.5 % made DSC00458's dark cliffs worse (an edge inside the sky won).
-- Mask edges now overlap instead of leaving a seam: the sky's tone equalizer reaches 1 % into the
-  land, the land's steps start 1.5 % below the skyline (0.5 % feather). Both photos without
-  visible seams; a faint rim remains on DSC00458's left cliff.
+- Mask edges, last of three tries: the sky's mask fades out and the land's fades in over the same
+  1.2 % below the skyline. Hard edges with an overlap had left a jagged dark seam along
+  _DSC0905's distant ridge above the brightened sea of fog; the cross-fade removes it, and
+  _DSC4746 and DSC00458 stay without seams (a faint rim on DSC00458's left cliff).
