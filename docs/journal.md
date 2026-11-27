@@ -1599,3 +1599,25 @@ owner's edit, G without a foreground step, K1, K2).
 - _DSC3050, _DSC3884, _DSC7298 failed in the solvers (division by zero on very dark renders).
 - **Owner's verdict:** K1. A night photo with a bright sky gets the open step "night: check look"
   instead of an automatic edit; light pollution stays with the owner.
+
+### 2026-11-27 — US-21: the night edit in the tool, masks along the skyline
+
+The tool's night edit (round 13's K1 with every target general) on DSC00458, _DSC0905, _DSC0923,
+_DSC4746 and _DSC4450, from an import-like history. Renders `photo-edits/_us21/tool/`; the mask
+checks in the job's work folder.
+
+- Exposure, star white balance and foreground solve to round 13's values (DSC00458: EV 2.63 vs
+  2.78, foreground step +0.85 vs +0.84); 23–37 renders per photo. _DSC4450 (blue hour) gets no
+  edit: its check render's sky median is 0.62 ≥ 0.19.
+- Mask placement, first attempt: a land path 3 % below the skyline (round 12's offset) left a
+  bright strip above _DSC4746's mountains once the land was darkened by 2 EV. A test rectangle
+  showed darktable places the path exactly where drawn, lens correction on or off.
+- The skyline itself was the remaining error: the model's grid (384 px across the frame) puts it
+  up to 1–2 % below a ridge, and a dark, vignetted corner was taken for sky (_DSC4746's left 4 %).
+  Fixes in US-23's finder: each skyline point moves to the strongest brightness edge within 1.2 %
+  if that edge is clearly stronger (1.5×) than at the model's point; a run of at most 8 % of the
+  width at the frame's side whose skyline drops by more than 0.15 takes its neighbour's value.
+  Snapping up to 2.5 % made DSC00458's dark cliffs worse (an edge inside the sky won).
+- Mask edges now overlap instead of leaving a seam: the sky's tone equalizer reaches 1 % into the
+  land, the land's steps start 1.5 % below the skyline (0.5 % feather). Both photos without
+  visible seams; a faint rim remains on DSC00458's left cliff.
