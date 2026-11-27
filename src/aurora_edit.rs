@@ -470,10 +470,10 @@ pub fn solve(
             (params.wb.1 * cl((tb / bg).powf(0.6))).clamp(0.8, 8.0),
         );
         let mut slope = 0.8;
-        if let [.., a, b] = pts[..] {
-            if a.0 != b.0 {
-                slope = ((b.1 - a.1) / (b.0 - a.0)).clamp(0.3, 1.5);
-            }
+        if let [.., a, b] = pts[..]
+            && a.0 != b.0
+        {
+            slope = ((b.1 - a.1) / (b.0 - a.0)).clamp(0.3, 1.5);
         }
         params.ev = (params.ev + (t - y) / slope).clamp(-3.0, 6.0);
     }
