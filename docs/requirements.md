@@ -279,22 +279,18 @@ for sure still counts as edited by hand (ADR-0003).
 mountains, city lights below — edited automatically close to my favourite night edits, so I only
 correct outliers.
 
-**Acceptance criteria:** Night photos get the night edit, chosen side by side against the owner's
-favourite night edits (journal 2026-11-26, rounds 1–12): AgX punchy, raw chromatic aberrations,
-chroma-only plus a non-local-means luma denoise, local contrast "clarity" twice and diffuse
-"local contrast | fine"; white balance for slightly blue stars; color balance rgb tints for the
-dark sky and the Milky Way glow; a tone curve after AgX that lifts the stars; above the horizon a
-tone equalizer that darkens the sky between the stars; below it a brightness step and a color
-calibration for the foreground. Exposure per photo for a sky median of 0.065; the owner raises
-single photos with the exposure slider. The self-test checks the tool's edits of the reference
-set's night photos like the day edits, and the upgrade block of US-9 applies.
+**Acceptance criteria:** [us-21-night-auto-edit.feature](../features/us-21-night-auto-edit.feature).
+Not executable: the self-test (US-2) also checks the tool's edits of the reference set's night
+photos against the tool's previous output, and the upgrade block of US-9 applies.
 
 **Notes:** The look to aim for is the owner's edits of DSC00461 (2018), _DSC0905, _DSC0909,
 _DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The foreground targets came from those edits. Without the owner's edit of a photo, the sky
 tints aim at the median of the six favourite edits, and the foreground gets a brightness of 0.10
 and a colour correction to neutral (journal 2026-11-27, round 13: K1). A "night" photo with a
 bright sky (blue hour, twilight) gets no automatic edit but the open step "night: check look"
-(owner, 2026-11-27); light pollution near the horizon stays with the owner.
+(owner, 2026-11-27): a sky median of at least 0.19 on the aurora check render (twilight 0.20–0.62,
+the brightest star photo, a moonrise, 0.17); light pollution near the horizon stays with the
+owner.
 The horizon line comes from US-23. A daytime long exposure with an ND filter counts as night by its
 exposure (US-7); the owner edits those rare photos by hand.
 
