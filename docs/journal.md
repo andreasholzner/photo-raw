@@ -1568,5 +1568,5 @@ Sheets `photo-edits/_us23/day_sheet_{1,2}.png`, previews in `photo-edits/_us23/d
   objects — harmless for a sky mask with a soft edge), and two single columns of false sky (a thin
   strip beside a face, the left edge of a lake shore).
 - Day photos are easier than night photos: no failures of the kind aurora causes.
-- Time: 18 min for 60 photos with three photos in parallel on 8 cores (about 50 s CPU per photo,
-  most of it darktable-cli's two renders).
+- Time: 18 min for 60 photos, one after the other on 8 cores — 18 s per photo (about 50 s CPU,
+  darktable-cli's two renders and the six model runs both use several cores).
