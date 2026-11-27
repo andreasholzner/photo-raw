@@ -1537,3 +1537,20 @@ column: scanning up from the bottom, the first rows that are sky. Sheets in `pho
   aurora; taking a pixel as sky when any of colour, greyscale or a darker mapping (99.99th
   percentile) says so keeps the good of each. Left: the aurora-to-the-ground cases and one Milky Way
   frame with a partly non-sky mask.
+
+### 2026-11-27 — US-23: round 3, higher resolution
+
+The 130 renders again at 768 px wide. Model input variants, each as colour, greyscale and darker
+mapping (sky where any of the three says so): (old) 300 px render at 384×384; (a) 768 px render
+averaged down to 384×384; (b) 768 px render at 768×512, the photo's aspect kept. Sheets
+`photo-edits/_us23/round3_*.png` (the 30 photos where any variant's skyline breaks up).
+
+- (a) gets the aurora right where it reaches the land (2019 Nordnorwegen, the boulder scenes) —
+  the averaging removes noise the 300 px render passes on. But clear Milky Way skies turn into
+  "cloud": pure-sky frames get patches of non-sky and a broken skyline.
+- (b) is worse than both: the model, trained at 384, sees more star detail than it knows.
+- Sky where (old) or (a) says so takes the good of each: of 130, 3 left with a wrong skyline — a
+  Milky Way frame without land (_DSC1176), the aurora reaching the land on _DSC7579 (middle third)
+  and on _DSC8305 (beside the tent). Reference set: 8 of 14 within 0.05 of the hand lines, median
+  0.043 (the hand lines are gradient starts).
+- Cost: 2 small renders and 6 model runs per photo, about 10 s on the CPU.
