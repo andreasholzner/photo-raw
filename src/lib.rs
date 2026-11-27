@@ -3,12 +3,14 @@
 //! (ADR-0006) test this library.
 
 pub mod aurora;
+pub mod aurora_edit;
 pub mod classify;
 pub mod config;
 pub mod darktable;
 pub mod day_edit;
 pub mod edit_state;
 pub mod exif;
+pub mod history_edit;
 pub mod horizon;
 pub mod image_diff;
 pub mod locate;
