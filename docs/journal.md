@@ -1570,3 +1570,30 @@ Sheets `photo-edits/_us23/day_sheet_{1,2}.png`, previews in `photo-edits/_us23/d
 - Day photos are easier than night photos: no failures of the kind aurora causes.
 - Time: 18 min for 60 photos, one after the other on 8 cores — 18 s per photo (about 50 s CPU,
   darktable-cli's two renders and the six model runs both use several cores).
+
+### 2026-11-27 — US-21, round 13: the night edit without the owner's targets, two foreground rules
+
+Nine night photos with land, none of the six favourites. Everything earlier rounds took from the
+owner's edit of each photo now comes from a general rule: star WB to the owner's median star
+colour, sky tints to the median dark-sky and Milky Way colour of the six edits, exposure to a sky
+median of 0.065, horizon from `photoflow horizon` (its middle, as a straight gradient — the tool
+will use the path along the skyline). Foreground: K1 brightness to 0.10 plus a colour correction to
+neutral; K2 brightness only. Sheets `photo-edits/_us21/round13/sheet_<photo>.png` (columns: the
+owner's edit, G without a foreground step, K1, K2).
+
+| photo | foreground L / R/G / B/G: owner, G, K1, K2 | note |
+|---|---|---|
+| DSC00458 | 0.04 / 1.08 / 0.62 · 0.06 / 1.26 / 0.99 · 0.10 / 1.00 / 1.00 · 0.10 / 1.13 / 1.03 | |
+| _DSC0906 | 0.07 / 0.95 / 0.88 · 0.01 · 0.08 · 0.08 | thin strip (horizon 0.96) |
+| _DSC0923 | 0.09 / 0.89 / 0.91 · 0.24 / 0.85 / 1.03 · 0.17 / 0.99 / 1.00 · 0.17 / 0.86 / 0.99 | foreground step at its −2 EV limit |
+| _DSC4746 | 0.09 / 1.04 / 0.96 · 0.26 / 0.89 / 1.24 · 0.15 / 1.00 / 1.01 · 0.16 / 0.91 / 1.11 | −2 EV limit |
+| _DSC4450 | — | blue hour, not a night sky: the night edit makes it almost black |
+| _DSC1183 | — | no land found |
+
+- The straight gradient at the skyline's middle cuts through peaks and walls (DSC00458's rock
+  wall, _DSC4746's ridge): bands of lifted or darkened sky. Not a property of K1/K2 — the tool's
+  path along the skyline avoids it.
+- K1 turns moonlit snow and rocks from blue (G, K2) to grey; K2 keeps the night's blue cast.
+- _DSC4450 is a blue-hour scene that counts as night by its exposure (16 s): the night edit's
+  sky target darkens it to black. Night photos with a bright sky need a rule.
+- _DSC3050, _DSC3884, _DSC7298 failed in the solvers (division by zero on very dark renders).
