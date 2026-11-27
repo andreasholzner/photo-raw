@@ -11,10 +11,10 @@
 //! start with "photoflow".
 
 use crate::aurora::Image;
-use crate::history_edit::{Entry, active, parse, with_instances, write};
+use crate::history_edit::Entry;
 use crate::horizon::Skyline;
-use crate::sidecar;
-use anyhow::{Context, Result, bail, ensure};
+use crate::look_edit::{Look, Shape, set_floats};
+use anyhow::{Context, Result};
 
 /// The modules the aurora edit adds, from the settled US-18 pipeline (darktable 5.6.1).
 pub const MODULES_XMP: &str = include_str!("../data/aurora-modules.xmp");
@@ -30,7 +30,6 @@ pub const DARK_FROM_RATIO: f64 = 1.0;
 /// The land's colour: slightly blue snow, as R/G and B/G (US-18 round 4).
 pub const LAND_TARGET: (f64, f64) = (0.95, 1.25);
 
-const OWN: &str = "photoflow";
 /// Switched off when darktable applied them on import: display transforms and sharpening as for
 /// the day edit, and denoise: the aurora look has its own.
 const REPLACED: [&str; 7] = [
@@ -42,14 +41,11 @@ const REPLACED: [&str; 7] = [
     "sharpen",
     "denoiseprofile",
 ];
-/// The tool's masks (ids from the template): the path along the skyline and its group.
+/// The tool's land mask (its id in the template).
 const LAND_PATH: &str = "1710017177";
-const LAND_GROUP: &str = "1710017183";
 /// The land mask starts this far (fraction of the frame height) below the skyline, with a soft
 /// edge of the same width.
 const LAND_OFFSET: f32 = 0.01;
-/// Points of the land path along the skyline.
-const PATH_POINTS: usize = 48;
 
 /// The sky's background colour, chosen per night (US-10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,262 +87,35 @@ pub struct Params {
     pub land: Option<(Skyline, (f64, f64))>,
 }
 
-fn template(op: &str, name: &str) -> Result<Entry> {
-    parse(MODULES_XMP)?
-        .entries
-        .into_iter()
-        .find(|e| e.get("operation") == op && (name.is_empty() || e.get("multi_name") == name))
-        .with_context(|| format!("no {op} {name:?} in the aurora modules"))
-}
-
-/// The look's own steps, in order (without the land step).
-fn look_steps() -> Result<Vec<Entry>> {
-    Ok(parse(MODULES_XMP)?
-        .entries
-        .into_iter()
-        .filter(|e| {
-            let op = e.get("operation");
-            op != "mask_manager" && op != "channelmixerrgb" && op != "temperature"
-        })
-        .collect())
-}
-
-fn set_floats(e: &mut Entry, at: usize, values: &[f32]) -> Result<()> {
-    let mut p = sidecar::decode(e.get("params"))?;
-    ensure!(
-        p.len() >= at + 4 * values.len(),
-        "unexpected {} parameters",
-        e.get("operation")
-    );
-    for (i, v) in values.iter().enumerate() {
-        p[at + 4 * i..at + 4 * i + 4].copy_from_slice(&v.to_le_bytes());
-    }
-    e.set("params", sidecar::encode(&p));
-    Ok(())
-}
+const LOOK: Look = Look {
+    modules: MODULES_XMP,
+    replaced: &REPLACED,
+};
 
 /// The photo's history with the aurora edit appended.
 pub fn build(sidecar_text: &str, params: &Params) -> Result<String> {
-    let p = parse(sidecar_text)?;
-    let mut entries = p.entries.clone();
-    let was_active: Vec<Entry> = active(&p.entries).into_iter().cloned().collect();
-    let own = |e: &Entry| e.get("multi_name").starts_with(OWN);
-
-    let mut steps = look_steps()?;
-    if params.land.is_some() {
-        steps.push(template("channelmixerrgb", "")?);
-    }
-    let wanted = |e: &Entry| {
-        steps.iter().any(|s| {
-            s.get("operation") == e.get("operation") && s.get("multi_name") == e.get("multi_name")
-        })
-    };
-    let mut add: Vec<Entry> = Vec::new();
-    for e in &was_active {
-        let op = e.get("operation");
-        if (own(e) && !wanted(e)) || (!own(e) && REPLACED.contains(&op)) {
-            let mut off = e.clone();
-            off.set("enabled", "0".into());
-            add.push(off);
-        }
-    }
-    // white balance and exposure: the import's main instances
-    let main = |op: &str| {
-        was_active
-            .iter()
-            .find(|e| e.get("operation") == op && e.prio() == 0 && !own(e))
-            .cloned()
-    };
-    let mut wb = match main("temperature") {
-        Some(e) => e,
-        None => template("temperature", "")?,
-    };
-    set_floats(&mut wb, 0, &[params.wb.0 as f32, 1.0, params.wb.1 as f32])?;
-    add.push(wb);
-    let mut exposure = main("exposure").map(Ok).unwrap_or_else(|| {
-        crate::history_edit::parse(crate::day_edit::MODULES_XMP)?
-            .entries
-            .into_iter()
-            .find(|e| e.get("operation") == "exposure")
-            .context("no exposure template")
-    })?;
-    set_floats(&mut exposure, 8, &[params.ev as f32])?;
-    exposure.set("enabled", "1".into());
-    add.push(exposure);
-
-    // the land mask: a new snapshot of the forms, the earlier ones plus the tool's path
-    let mut masks = p.masks.clone();
-    if let Some((skyline, _)) = &params.land {
-        let mut mm = template("mask_manager", "")?;
-        mm.set("enabled", "1".into());
-        let num = p.entries.len() + add.len();
-        masks = with_land_forms(&p.masks, num, skyline)?;
-        add.push(mm);
-    }
-    // the look: the tool's instance of each step where there is one, else a free one
-    let mut new_instances = Vec::new();
-    for mut e in steps {
-        let op = e.get("operation").to_string();
-        let name = e.get("multi_name").to_string();
-        let same = |x: &Entry| x.get("operation") == op && x.get("multi_name") == name;
-        let prio = match entries.iter().chain(add.iter()).find(|x| same(x)) {
-            Some(x) => x.prio(),
-            None => entries
-                .iter()
-                .chain(add.iter())
-                .filter(|x| x.get("operation") == op)
-                .map(Entry::prio)
-                .max()
-                .map_or(0, |m| m + 1),
-        };
-        e.set("multi_priority", prio.to_string());
-        if op == "channelmixerrgb" {
-            let (_, (x, y)) = params.land.as_ref().context("land step without land")?;
-            set_floats(&mut e, 96 + 10 * 4, &[*x as f32, *y as f32])?;
-        }
-        if prio > 0 && !new_instances.contains(&(op.clone(), prio)) {
-            new_instances.push((op, prio));
-        }
-        add.push(e);
-    }
-    for (i, mut e) in add.into_iter().enumerate() {
-        e.set("num", (p.entries.len() + i).to_string());
-        entries.push(e);
-    }
-
-    let list = match &p.order_list {
-        Some(l) => with_instances(l, &new_instances)?,
-        None if p.order_version == "4" || p.order_version.is_empty() => with_instances(
-            &parse(MODULES_XMP)?.order_list.context("no order list")?,
-            &new_instances,
-        )?,
-        None => bail!("can't add module instances to this history"),
-    };
-    let attrs = vec![
-        ("xmp_version", "5".to_string()),
-        ("auto_presets_applied", "1".to_string()),
-        ("history_end", entries.len().to_string()),
-        ("iop_order_version", "4".to_string()),
-        ("iop_order_list", list),
-    ];
-    Ok(write(&attrs, &entries, &masks))
-}
-
-/// One masks_history entry: its darktable attributes.
-type Form = Vec<(String, String)>;
-
-fn forms(masks: &str) -> Result<Vec<Form>> {
-    if masks.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-    let wrapped = format!(
-        r#"<r xmlns:darktable="http://darktable.sf.net/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">{masks}</r>"#
-    );
-    let doc = roxmltree::Document::parse(&wrapped)?;
-    Ok(doc
-        .descendants()
-        .filter(|n| n.has_tag_name(("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "li")))
-        .map(|li| {
-            li.attributes()
-                .map(|a| (a.name().to_string(), a.value().to_string()))
-                .collect()
-        })
-        .collect())
-}
-
-fn attr<'a>(f: &'a Form, k: &str) -> &'a str {
-    f.iter().find(|(n, _)| n == k).map_or("", |(_, v)| v)
-}
-
-fn set_attr(f: &mut Form, k: &str, v: String) {
-    match f.iter_mut().find(|(n, _)| n == k) {
-        Some(x) => x.1 = v,
-        None => f.push((k.to_string(), v)),
-    }
-}
-
-/// The masks_history element: the earlier snapshots unchanged, and at history entry `num` the
-/// latest snapshot's forms (without the tool's earlier ones) plus the land path and its group.
-fn with_land_forms(masks: &str, num: usize, skyline: &Skyline) -> Result<String> {
-    let old = forms(masks)?;
-    let latest = old
-        .iter()
-        .filter_map(|f| attr(f, "mask_num").parse::<usize>().ok())
-        .max();
-    let mut out = old.clone();
-    if let Some(l) = latest {
-        for f in old.iter().filter(|f| attr(f, "mask_num") == l.to_string()) {
-            if [LAND_PATH, LAND_GROUP].contains(&attr(f, "mask_id")) {
-                continue;
-            }
-            let mut f = f.clone();
-            set_attr(&mut f, "mask_num", num.to_string());
-            out.push(f);
-        }
-    }
-    let template = forms(&parse(MODULES_XMP)?.masks)?;
-    for t in template {
-        let mut f = t.clone();
-        set_attr(&mut f, "mask_num", num.to_string());
-        if attr(&t, "mask_id") == LAND_PATH {
-            let pts = land_path(skyline);
-            set_attr(&mut f, "mask_type", "2".into());
-            set_attr(&mut f, "mask_nb", pts.len().to_string());
-            let mut bytes = Vec::with_capacity(36 * pts.len());
-            for (x, y) in pts {
-                for v in [x, y, x, y, x, y, LAND_OFFSET, LAND_OFFSET] {
-                    bytes.extend_from_slice(&v.to_le_bytes());
-                }
-                bytes.extend_from_slice(&2i32.to_le_bytes()); // user-set control points: a polygon
-            }
-            set_attr(&mut f, "mask_points", hex(&bytes));
-        }
-        out.push(f);
-    }
-    let lis: Vec<String> = out
-        .iter()
-        .map(|f| {
-            let a: Vec<String> = f
-                .iter()
-                .map(|(k, v)| format!("darktable:{k}=\"{}\"", crate::history_edit::escape(v)))
-                .collect();
-            format!("     <rdf:li {}/>", a.join(" "))
-        })
+    let mut steps: Vec<Entry> = LOOK
+        .steps()?
+        .into_iter()
+        .filter(|e| e.get("operation") != "channelmixerrgb")
         .collect();
-    Ok(format!(
-        "<darktable:masks_history>\n    <rdf:Seq>\n{}\n    </rdf:Seq>\n   </darktable:masks_history>",
-        lis.join("\n")
-    ))
-}
-
-fn hex(b: &[u8]) -> String {
-    b.iter().map(|x| format!("{x:02x}")).collect()
-}
-
-/// The land as a closed polygon (fractions of the frame): along the skyline, [`LAND_OFFSET`]
-/// below it, then around the bottom outside the frame. Columns without sky are land to the top.
-pub fn land_path(skyline: &Skyline) -> Vec<(f32, f32)> {
-    let n = skyline.columns.len().max(1);
-    let mut pts = Vec::with_capacity(PATH_POINTS + 4);
-    for i in 0..PATH_POINTS {
-        // the highest land in this stretch of columns, so peaks keep their tips
-        let (a, b) = (
-            i * n / PATH_POINTS,
-            ((i + 1) * n / PATH_POINTS).max(i * n / PATH_POINTS + 1),
-        );
-        let y = skyline.columns[a..b.min(n)]
-            .iter()
-            .map(|c| c.unwrap_or(0.0))
-            .fold(1.0f32, f32::min);
-        let x = (i as f32 + 0.5) / PATH_POINTS as f32;
-        pts.push((x, (y + LAND_OFFSET).min(1.05)));
+    let mut shapes = Vec::new();
+    if let Some((skyline, (x, y))) = &params.land {
+        let mut e = LOOK.template("channelmixerrgb", "")?;
+        set_floats(&mut e, 96 + 10 * 4, &[*x as f32, *y as f32])?;
+        steps.push(e);
+        shapes.push(Shape {
+            id: LAND_PATH,
+            points: land_path(skyline),
+            border: LAND_OFFSET,
+        });
     }
-    let (y0, y1) = (pts[0].1, pts[PATH_POINTS - 1].1);
-    pts.insert(0, (-0.05, y0));
-    pts.push((1.05, y1));
-    pts.push((1.05, 1.05));
-    pts.push((-0.05, 1.05));
-    pts
+    LOOK.append(sidecar_text, params.wb, params.ev, steps, &shapes)
+}
+
+/// The land as a closed polygon, [`LAND_OFFSET`] below the skyline.
+pub fn land_path(skyline: &Skyline) -> Vec<(f32, f32)> {
+    crate::look_edit::land_path(skyline, LAND_OFFSET)
 }
 
 // --- measuring renders ---
@@ -541,6 +310,8 @@ pub fn solve(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::history_edit::{active, parse};
+    use crate::look_edit::{PATH_POINTS, attr, forms};
 
     const IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
