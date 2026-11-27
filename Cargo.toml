@@ -16,6 +16,8 @@ roxmltree = "0.21.2"
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.2.2"
 ctrlc = "3.5.3"
+sha2 = "0.10"
+tract-onnx = "0.21"
 
 
 [[test]]

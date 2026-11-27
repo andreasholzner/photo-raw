@@ -168,9 +168,16 @@ pub fn scenarios(cfg: &Config, only: Option<&str>) -> Result<bool> {
     let cli_ok = if n_cli > 0 {
         println!("Running the darktable-cli scenarios …");
         let dt = Darktable::prepare(&cfg.darktable.cli, &cfg.darktable_config_dir()?, &cli_work)?;
+        let (cli, dt_config) = (cfg.darktable.cli.clone(), cfg.darktable_config_dir()?);
+        let (hz_work, models) = (base.join("horizon"), cfg.data_dir()?.join("models"));
         let ctx = crate::scenarios::CliContext {
             check: crate::classify::AuroraCheck::new(dt, &cli_work.join("renders"))?,
             photo_root: cfg.photo_root.clone(),
+            horizon: std::sync::OnceLock::new(),
+            make_horizon: Box::new(move || {
+                let dt = Darktable::prepare(&cli, &dt_config, &hz_work.join("darktable-cli"))?;
+                crate::horizon::Finder::new(dt, &hz_work.join("renders"), &models)
+            }),
         };
         crate::scenarios::run_cli(&features, only, ctx)
     } else {

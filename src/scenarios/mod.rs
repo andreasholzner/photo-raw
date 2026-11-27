@@ -39,6 +39,10 @@ pub const FEATURES: &[(&str, &str)] = &[
         "us-12-panorama-sets.feature",
         include_str!("../../features/us-12-panorama-sets.feature"),
     ),
+    (
+        "us-23-horizon-line-per-photo.feature",
+        include_str!("../../features/us-23-horizon-line-per-photo.feature"),
+    ),
 ];
 
 /// A change the owner makes in the darkroom.
@@ -107,6 +111,10 @@ static DRIVER: Mutex<Option<Arc<Mutex<dyn Driver>>>> = Mutex::new(None);
 pub struct CliContext {
     pub check: AuroraCheck,
     pub photo_root: PathBuf,
+    /// US-23: made on first use (it may download the sky model).
+    pub horizon: std::sync::OnceLock<crate::horizon::Finder>,
+    #[allow(clippy::type_complexity)]
+    pub make_horizon: Box<dyn Fn() -> anyhow::Result<crate::horizon::Finder> + Send + Sync>,
 }
 
 static CLI: Mutex<Option<Arc<CliContext>>> = Mutex::new(None);
@@ -127,6 +135,8 @@ pub struct ScenarioWorld {
     edit_before: Option<String>,
     upgrade: (Option<String>, Option<String>),
     blocked: Option<&'static str>,
+    /// US-23: the skyline the tool found.
+    skyline: Option<crate::horizon::Skyline>,
     /// US-12: photos for the proposal rule (gaps, focal lengths), and the proposals' sizes.
     shots: Vec<crate::panorama::Shot>,
     proposal_sizes: Option<Vec<usize>>,
@@ -162,6 +172,7 @@ impl ScenarioWorld {
             edits_before: Vec::new(),
             shots: Vec::new(),
             proposal_sizes: None,
+            skyline: None,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -700,6 +711,56 @@ fn installed(w: &mut ScenarioWorld, version: String) {
 #[then(expr = "the tool edits no photo and reports {string}")]
 fn edits_blocked(w: &mut ScenarioWorld, report: String) {
     assert_eq!(w.blocked, Some(report.as_str()));
+}
+
+// ---------------------------------------------------------------------------------------------
+// US-23 — Horizon line per photo
+// ---------------------------------------------------------------------------------------------
+
+#[given(expr = "the reference photo {word} from {int}")]
+fn reference_photo(w: &mut ScenarioWorld, file: String, year: u16) {
+    reference_night_photo(w, &file, year);
+}
+
+#[when("the tool looks for the horizon")]
+fn looks_for_horizon(w: &mut ScenarioWorld) {
+    let ctx = CLI
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("needs darktable-cli (self-test only)");
+    let finder = match ctx.horizon.get() {
+        Some(f) => f,
+        None => {
+            let f = (ctx.make_horizon)().unwrap_or_else(|e| panic!("sky model: {e:#}"));
+            let _ = ctx.horizon.set(f);
+            ctx.horizon.get().unwrap()
+        }
+    };
+    let raw = w.photo.clone().expect("a photo");
+    let (line, _) = finder.find(&raw).unwrap_or_else(|e| panic!("{e:#}"));
+    w.skyline = Some(line);
+}
+
+fn about(what: &str, got: Option<f32>, want: f32) {
+    let got = got.unwrap_or_else(|| panic!("no {what}"));
+    assert!(
+        (got - want).abs() <= 0.05,
+        "{what} at {got:.2}, expected about {want:.2}"
+    );
+}
+
+#[then(expr = "the land starts at about {float} of the frame height")]
+fn land_starts_at(w: &mut ScenarioWorld, middle: f32) {
+    let line = w.skyline.as_ref().expect("looked for the horizon");
+    assert!(line.has_land(), "no land found");
+    about("the land", line.middle(), middle);
+}
+
+#[then(expr = "the skyline reaches up to about {float}")]
+fn skyline_top(w: &mut ScenarioWorld, top: f32) {
+    let line = w.skyline.as_ref().expect("looked for the horizon");
+    about("the skyline's top", line.extent().map(|e| e.0), top);
 }
 
 // ---------------------------------------------------------------------------------------------

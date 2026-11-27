@@ -9,6 +9,7 @@ pub mod darktable;
 pub mod day_edit;
 pub mod edit_state;
 pub mod exif;
+pub mod horizon;
 pub mod image_diff;
 pub mod locate;
 pub mod panorama;
