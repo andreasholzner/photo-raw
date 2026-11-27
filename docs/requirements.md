@@ -236,24 +236,20 @@ at 0.885). Dehaze is off by default; proposing it for long-range views is US-22.
 **In progress 🚧** — As the owner, I want aurora photos edited to show how the aurora felt — bright and
 colourful, not neon — so I can cull after editing.
 
-**Acceptance criteria:** Aurora base (US-18) plus per-photo sky brightness and per-photo sky colour
-(the aurora changes within minutes). The brightness target depends on the scene (e.g. a lit
-foreground gets a darker target). The sky targets are derived from the owner's past aurora edits and
-checked on them. The foreground (land below the horizon, US-23) gets its own per-photo colour
-correction towards slightly blue snow (US-18). The sky colour (neutral blue or blue-violet) is
-chosen per night and can be overridden per photo: until it is chosen, a night's photos get a
-default colour, an open step for the night, and duplicates in the other colour to compare; once
-chosen, the tool redoes the edits and removes its comparison duplicates nobody changed (ADR-0003).
-The self-test checks the tool's edits of the reference set's aurora photos like the day edits, and
-the upgrade block of US-9 applies.
+**Acceptance criteria:** [us-10-aurora-auto-edit.feature](../features/us-10-aurora-auto-edit.feature).
+Not executable: the self-test (US-2) also checks the tool's edits of the reference set's aurora
+photos against the tool's previous output, and the upgrade block of US-9 applies.
 
 **Notes:** Sky targets (journal 2026-11-26): sky median 0.24, or 0.14 where the scene's foreground is
 at least as bright as its sky (ratio ≥ 1.0, measured on the aurora check render; 0.6 darkened the
 snowy January 2026 nights the owner had accepted bright); sky background
 neutral blue R/G 0.95, B/G 1.35, blue-violet 1.05, 1.50. Against the owner's own edits the rule is
 off by a median 0.4 EV (the owner's style changed between years); the owner adjusts single photos
-with the exposure slider, or lowers visible noise there with the luma denoise strength (US-24). On very dark foregrounds (village lights, mountains) the foreground
-correction made no measurable difference (journal 2026-11-25, round 3).
+with the exposure slider, or lowers visible noise there with the luma denoise strength (US-24).
+On very dark foregrounds (village lights, mountains) the foreground correction made no measurable
+difference (journal 2026-11-25, round 3). A night runs from noon to noon (capture time);
+comparison duplicates go to a few photos of an undecided night, at least 20 % of them (owner,
+2026-11-27).
 
 **Decisions:** US-10 → ADR-0003, ADR-0004
 
