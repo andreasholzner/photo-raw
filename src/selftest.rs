@@ -38,7 +38,7 @@ impl Dirs {
     }
 }
 
-/// The render of the tool's day edit of a reference photo (US-9).
+/// The render of the tool's day or aurora edit of a reference photo (US-9, US-10).
 fn tool_png_name(p: &RefPhoto) -> String {
     format!("tool-{}", png_name(p))
 }
@@ -92,7 +92,7 @@ fn run_renders(cfg: &Config) -> Result<bool> {
     for p in &set {
         let name = tool_png_name(p);
         if dirs.reference.join(&name).is_file() || dirs.current.join(&name).is_file() {
-            checks.push((name, "the tool's day edit (US-9)".into()));
+            checks.push((name, "the tool's edit (US-9, US-10)".into()));
         }
     }
     let width = checks.iter().map(|(n, _)| n.len()).max().unwrap_or(10);
@@ -351,12 +351,13 @@ fn render_set(cfg: &Config, dirs: &Dirs) -> Result<bool> {
     // US-9: the tool's day edit of every day photo, on darktable's defaults (the photos' import
     // histories are gone), with the exposure solved as in a real run
     let day: Vec<(RefPhoto, PathBuf)> = sources
-        .into_iter()
+        .iter()
         .filter(|(_, s)| {
             crate::exif::read(s)
                 .map(|e| crate::scene::classify(&e) == crate::scene::Scene::Day)
                 .unwrap_or(false)
         })
+        .cloned()
         .collect();
     println!("Rendering the tool's day edit of {} photos …", day.len());
     let queue = Mutex::new(day.into_iter());
@@ -385,6 +386,55 @@ fn render_set(cfg: &Config, dirs: &Dirs) -> Result<bool> {
             });
         }
     });
+    // US-10: the tool's aurora edit of every aurora photo, likewise on darktable's defaults
+    let aurora = aurora_photos(cfg, dirs, &sources);
+    if !aurora.is_empty() {
+        println!(
+            "Rendering the tool's aurora edit of {} photos …",
+            aurora.len()
+        );
+        let finder = crate::horizon::Finder::new(
+            Darktable::prepare(
+                &cfg.darktable.cli,
+                &cfg.darktable_config_dir()?,
+                &dirs.work.join("horizon"),
+            )?,
+            &dirs.work.join("horizon-renders"),
+            &cfg.data_dir()?.join("models"),
+        )?;
+        let queue = Mutex::new(aurora.into_iter());
+        let done = AtomicUsize::new(0);
+        let total = queue.lock().unwrap().len();
+        std::thread::scope(|s| {
+            for _ in 0..cfg.selftest.jobs {
+                s.spawn(|| {
+                    loop {
+                        let Some((p, source, ratio)) = queue.lock().unwrap().next() else {
+                            break;
+                        };
+                        let out = dirs.current.join(tool_png_name(&p));
+                        let result = tool_aurora_edit(
+                            &dt,
+                            &finder,
+                            &source,
+                            ratio,
+                            &dirs.work.join("tool"),
+                            &png_name(&p),
+                        )
+                        .and_then(|xmp| dt.render(&source, &xmp, &out, cfg.selftest.size));
+                        let n = done.fetch_add(1, Ordering::SeqCst) + 1;
+                        match result {
+                            Ok(()) => println!("  [{n:>2}/{total}] {} (tool)", p.file),
+                            Err(e) => {
+                                println!("  [{n:>2}/{total}] {} (tool) FAILED", p.file);
+                                failures.lock().unwrap().push(format!("{e:#}"));
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
     let failures = failures.into_inner().unwrap();
     for f in &failures {
         eprintln!("  {f}");
@@ -415,6 +465,65 @@ fn tool_day_edit(dt: &Darktable, source: &Path, work: &Path, name: &str) -> Resu
         dt.render(source, &xmp, &probe, day_edit::RENDER_SIZE)?;
         crate::aurora::load_pfm(&probe)
     })?;
+    std::fs::write(&xmp, &solved.xmp)?;
+    Ok(xmp)
+}
+
+/// The reference set's aurora photos (US-7's check), with their scene ratio (US-10).
+fn aurora_photos(
+    cfg: &Config,
+    dirs: &Dirs,
+    sources: &[(RefPhoto, PathBuf)],
+) -> Vec<(RefPhoto, PathBuf, f64)> {
+    let check = Darktable::prepare(
+        &cfg.darktable.cli,
+        &cfg.darktable_config_dir().unwrap_or_default(),
+        &dirs.work.join("aurora-check"),
+    )
+    .and_then(|dt| crate::classify::AuroraCheck::new(dt, &dirs.work.join("aurora-renders")));
+    let Ok(check) = check else {
+        return Vec::new();
+    };
+    sources
+        .iter()
+        .filter(|(_, s)| {
+            crate::exif::read(s)
+                .map(|e| crate::scene::classify(&e) == crate::scene::Scene::Night)
+                .unwrap_or(false)
+        })
+        .filter_map(|(p, s)| {
+            let img = check.render(s).ok()?;
+            crate::aurora::has_aurora(&img)
+                .then(|| (p.clone(), s.clone(), crate::aurora_edit::scene_ratio(&img)))
+        })
+        .collect()
+}
+
+/// The tool's aurora edit of `source` (neutral blue) on darktable's defaults; returns its sidecar.
+fn tool_aurora_edit(
+    dt: &Darktable,
+    finder: &crate::horizon::Finder,
+    source: &Path,
+    ratio: f64,
+    work: &Path,
+    name: &str,
+) -> Result<PathBuf> {
+    use crate::aurora_edit;
+    std::fs::create_dir_all(work)?;
+    let xmp = work.join(format!("{name}.xmp"));
+    let probe = work.join(format!("{name}.pfm"));
+    let (line, _) = finder.find(source)?;
+    let solved = aurora_edit::solve(
+        crate::day_edit::EMPTY_HISTORY,
+        aurora_edit::SkyColour::NeutralBlue,
+        aurora_edit::sky_target(ratio),
+        Some(&line),
+        &mut |text| {
+            std::fs::write(&xmp, text)?;
+            dt.render(source, &xmp, &probe, aurora_edit::RENDER_SIZE)?;
+            crate::aurora::load_pfm(&probe)
+        },
+    )?;
     std::fs::write(&xmp, &solved.xmp)?;
     Ok(xmp)
 }

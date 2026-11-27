@@ -29,11 +29,21 @@ local function write(path, text)
   assert(os.rename(path .. ".tmp", path))
 end
 
+-- the photo at `path`: the original, not one of darktable's duplicates
 local function image(path)
   for _, img in ipairs(dt.database) do
-    if img.path .. "/" .. img.filename == path then return img end
+    if img.path .. "/" .. img.filename == path and img.duplicate_index == 0 then return img end
   end
   error("not in the library: " .. path)
+end
+
+-- the original and its duplicates (US-10)
+local function versions(path)
+  local out = {}
+  for _, img in ipairs(dt.database) do
+    if img.path .. "/" .. img.filename == path then out[#out + 1] = img end
+  end
+  return out
 end
 
 -- switching views happens in the background: wait until it's done
@@ -136,6 +146,35 @@ function commands.pano(action)
   else error("unknown panorama action " .. action) end
   dt.control.sleep(500)
   return ""
+end
+
+-- US-10: darktable's duplicates of a photo
+function commands.versions(path)
+  local out = {}
+  for _, img in ipairs(versions(path)) do
+    local tags = {}
+    for _, t in ipairs(img:get_tags()) do tags[#tags + 1] = t.name end
+    out[#out + 1] = img.sidecar .. "\t" .. img.duplicate_index .. "\t" .. table.concat(tags, "\31")
+  end
+  return table.concat(out, "\30")
+end
+
+function commands.process_versions(path)
+  local images = versions(path)
+  photoflow.process(images)
+  return ""
+end
+
+function commands.apply_style_version(name, path, index)
+  for _, img in ipairs(versions(path)) do
+    if img.duplicate_index == tonumber(index) then
+      for _, st in ipairs(dt.styles) do
+        if st.name == name then dt.styles.apply(st, img); return "" end
+      end
+      error("no style " .. name)
+    end
+  end
+  error("no version " .. index .. " of " .. path)
 end
 
 function commands.tags_of(path)

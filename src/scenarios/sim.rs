@@ -495,6 +495,19 @@ impl Driver for Sim {
             .clone())
     }
 
+    fn versions(&mut self) -> Result<Vec<(PathBuf, u32, Vec<String>)>> {
+        anyhow::bail!("duplicates aren't simulated")
+    }
+    fn start_tool_on_versions(&mut self) -> Result<()> {
+        anyhow::bail!("duplicates aren't simulated")
+    }
+    fn change_version(&mut self, _: u32) -> Result<()> {
+        anyhow::bail!("duplicates aren't simulated")
+    }
+    fn render_version(&mut self, _: &std::path::Path, _: u32) -> Result<crate::aurora::Image> {
+        anyhow::bail!("renders aren't simulated")
+    }
+
     fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>> {
         photos
             .iter()

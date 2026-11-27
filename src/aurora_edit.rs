@@ -452,31 +452,48 @@ pub fn solve(
         wb: (2.4, 2.0),
         land: None,
     };
+    // exposure and each white-balance coefficient are corrected by the response measured between
+    // the last two renders (the look's extra chroma makes the colour react ~3× to the white
+    // balance: fixed steps overshoot); the best render wins
     let mut pts: Vec<(f64, f64)> = Vec::new();
-    let mut reached = false;
-    for _ in 0..8 {
+    let mut red: Vec<(f64, f64)> = Vec::new();
+    let mut blue: Vec<(f64, f64)> = Vec::new();
+    let mut best: Option<(f64, Params, bool)> = None;
+    for _ in 0..14 {
         let img = render(&build(sidecar_text, &params)?)?;
         let (l50, rg, bg) = sky_stats(&img)?;
         let y = l50.max(1e-4).log2();
-        pts.push((params.ev, y));
-        if (y - t).abs() < 0.08 && (rg / tr).ln().abs() < 0.06 && (bg / tb).ln().abs() < 0.06 {
-            reached = true;
+        if std::env::var_os("PF_TRACE").is_some() {
+            eprintln!(
+                "ev {:.2} wb {:.2}/{:.2} -> L {l50:.3} rg {rg:.3} bg {bg:.3}",
+                params.ev, params.wb.0, params.wb.1
+            );
+        }
+        let (er, eb) = ((tr / rg).ln(), (tb / bg).ln());
+        let err = (y - t).abs() + er.abs() + eb.abs();
+        let reached_here = (y - t).abs() < 0.15;
+        if best.as_ref().is_none_or(|b| err < b.0) {
+            best = Some((err, params.clone(), reached_here));
+        }
+        if (y - t).abs() < 0.08 && er.abs() < 0.04 && eb.abs() < 0.04 {
             break;
         }
-        reached = (y - t).abs() < 0.15;
-        let cl = |f: f64| f.clamp(0.87, 1.15);
+        pts.push((params.ev, y));
+        red.push((params.wb.0.ln(), rg.ln()));
+        blue.push((params.wb.1.ln(), bg.ln()));
+        let response = |h: &[(f64, f64)], default: f64, lo: f64, hi: f64| match h {
+            [.., a, b] if (b.0 - a.0).abs() > 1e-3 => ((b.1 - a.1) / (b.0 - a.0)).clamp(lo, hi),
+            _ => default,
+        };
+        let step = |e: f64, k: f64| (e / k).clamp(-0.22, 0.22).exp();
         params.wb = (
-            (params.wb.0 * cl((tr / rg).powf(0.6))).clamp(1.2, 5.0),
-            (params.wb.1 * cl((tb / bg).powf(0.6))).clamp(0.8, 8.0),
+            (params.wb.0 * step(er, response(&red, 1.7, 0.5, 6.0))).clamp(1.0, 6.0),
+            (params.wb.1 * step(eb, response(&blue, 1.7, 0.5, 6.0))).clamp(0.8, 10.0),
         );
-        let mut slope = 0.8;
-        if let [.., a, b] = pts[..]
-            && a.0 != b.0
-        {
-            slope = ((b.1 - a.1) / (b.0 - a.0)).clamp(0.3, 1.5);
-        }
-        params.ev = (params.ev + (t - y) / slope).clamp(-3.0, 6.0);
+        params.ev = (params.ev + (t - y) / response(&pts, 0.8, 0.3, 1.5)).clamp(-3.0, 6.0);
     }
+    let (_, best_params, reached) = best.context("no render")?;
+    params = best_params;
 
     if let Some(line) = skyline.filter(|l| l.has_land()) {
         let target = (LAND_TARGET.0.ln(), LAND_TARGET.1.ln());

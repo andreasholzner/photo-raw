@@ -552,6 +552,82 @@ impl Driver for App {
             .collect())
     }
 
+    fn versions(&mut self) -> Result<Vec<(PathBuf, u32, Vec<String>)>> {
+        let p = self.current()?.to_string_lossy().to_string();
+        self.lighttable()?;
+        let text = self.call(&["versions", &p])?;
+        let mut out = Vec::new();
+        for v in text.split('\u{1e}').filter(|v| !v.is_empty()) {
+            let f: Vec<&str> = v.splitn(3, '\t').collect();
+            out.push((
+                PathBuf::from(f[0]),
+                f.get(1).unwrap_or(&"0").parse()?,
+                f.get(2)
+                    .unwrap_or(&"")
+                    .split('\u{1f}')
+                    .filter(|t| !t.is_empty())
+                    .map(String::from)
+                    .collect(),
+            ));
+        }
+        out.sort_by_key(|v| v.1);
+        Ok(out)
+    }
+
+    fn start_tool_on_versions(&mut self) -> Result<()> {
+        let p = self.current()?.to_string_lossy().to_string();
+        self.lighttable()?;
+        let before = self.call(&["photoflow_runs"])?;
+        self.call(&["process_versions", &p])?;
+        self.wait_photoflow(&before)
+    }
+
+    fn change_version(&mut self, index: u32) -> Result<()> {
+        let p = self.current()?.to_string_lossy().to_string();
+        let sidecar = self
+            .versions()?
+            .into_iter()
+            .find(|v| v.1 == index)
+            .context("no such duplicate")?
+            .0;
+        let before = std::fs::read_to_string(&sidecar).ok();
+        self.call(&["apply_style_version", STYLE_NAME, &p, &index.to_string()])?;
+        let start = Instant::now();
+        while start.elapsed() < Duration::from_secs(10)
+            && std::fs::read_to_string(&sidecar).ok() == before
+        {
+            std::thread::sleep(Duration::from_millis(300));
+        }
+        std::thread::sleep(Duration::from_secs(1));
+        Ok(())
+    }
+
+    fn render_version(&mut self, sidecar: &Path, size: u32) -> Result<crate::aurora::Image> {
+        let photo = self.current()?;
+        if self.renderer.is_none() {
+            self.renderer = Some(crate::darktable::Darktable::prepare(
+                &self.cli.0,
+                &self.cli.1,
+                &self.work.join("darktable-cli"),
+            )?);
+        }
+        let dir = self.work.join("renders");
+        std::fs::create_dir_all(&dir)?;
+        let name = sidecar
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let xmp = dir.join(format!("{}-v-{name}", self.photos));
+        let out = dir.join(format!("{}-v-{name}.pfm", self.photos));
+        std::fs::copy(sidecar, &xmp)?;
+        self.renderer
+            .as_ref()
+            .unwrap()
+            .render(&photo, &xmp, &out, size)?;
+        crate::aurora::load_pfm(&out)
+    }
+
     fn edits(&mut self, photos: &[PathBuf]) -> Result<Vec<(String, Vec<String>)>> {
         self.lighttable()?;
         let mut out = Vec::new();

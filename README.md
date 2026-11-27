@@ -74,9 +74,13 @@ about 10 s per photo.
 
 `darktable/lua/photoflow.lua` hands photos over to `photoflow process`: newly imported photos
 at once (can be switched off in darktable's preferences, "lua options"), others with the
-shortcut "photoflow: process photos". For now it sorts photos into day, night and aurora and
-records open steps and reports as tags (`photoflow|class|…`, `photoflow|open|…`,
-`photoflow|left alone|…`); the edits themselves follow. Installing it is US-17.
+shortcut "photoflow: process photos". It sorts photos into day, night and aurora, edits day
+and aurora photos (the night edit follows, US-21), and records open steps and reports as tags
+(`photoflow|class|…`, `photoflow|open|…`, `photoflow|left alone|…`). Aurora photos get their
+sky colour per night (`photoflow|night colour|neutral` or `…|violet` on any photo of the night,
+`photoflow|sky colour|…` for a single photo); an undecided night gets comparison duplicates in
+the other colour, which the tool removes once the night is decided, unless they were changed.
+Installing it is US-17.
 
 ## darktable setup
 

@@ -36,6 +36,10 @@ pub const FEATURES: &[(&str, &str)] = &[
         include_str!("../../features/us-09-day-auto-edit.feature"),
     ),
     (
+        "us-10-aurora-auto-edit.feature",
+        include_str!("../../features/us-10-aurora-auto-edit.feature"),
+    ),
+    (
         "us-12-panorama-sets.feature",
         include_str!("../../features/us-12-panorama-sets.feature"),
     ),
@@ -102,6 +106,16 @@ pub trait Driver: Send {
     fn sidecar_text(&mut self) -> Result<String>;
     /// Renders the photo with its sidecar (darktable-cli), longest edge `size`.
     fn render(&mut self, size: u32) -> Result<crate::aurora::Image>;
+
+    // US-10: darktable's duplicates of the photo under test
+    /// The photo and its duplicates: sidecar, duplicate index (0: the original), tags.
+    fn versions(&mut self) -> Result<Vec<(PathBuf, u32, Vec<String>)>>;
+    /// The owner starts the tool on the photo and its duplicates.
+    fn start_tool_on_versions(&mut self) -> Result<()>;
+    /// A change by hand in the lighttable to the duplicate with this index.
+    fn change_version(&mut self, index: u32) -> Result<()>;
+    /// Renders the photo with this sidecar (one of its versions).
+    fn render_version(&mut self, sidecar: &Path, size: u32) -> Result<crate::aurora::Image>;
 }
 
 /// Which driver the next scenarios use.
@@ -119,6 +133,9 @@ pub struct CliContext {
 
 static CLI: Mutex<Option<Arc<CliContext>>> = Mutex::new(None);
 
+/// A plan as `process::plan` makes it.
+type Plan = Vec<(PathBuf, Vec<crate::process::Step>)>;
+
 #[derive(World)]
 #[world(init = Self::new)]
 pub struct ScenarioWorld {
@@ -135,6 +152,12 @@ pub struct ScenarioWorld {
     edit_before: Option<String>,
     upgrade: (Option<String>, Option<String>),
     blocked: Option<&'static str>,
+    /// US-10: the sky target, a built edit, capture times, a planned night.
+    sky_target: Option<f64>,
+    aurora_xmp: Option<String>,
+    times: Vec<f64>,
+    night: Option<(crate::process::Handover, Plan)>,
+    night_reached: bool,
     /// US-23: the skyline the tool found.
     skyline: Option<crate::horizon::Skyline>,
     /// US-12: photos for the proposal rule (gaps, focal lengths), and the proposals' sizes.
@@ -173,6 +196,11 @@ impl ScenarioWorld {
             shots: Vec::new(),
             proposal_sizes: None,
             skyline: None,
+            sky_target: None,
+            aurora_xmp: None,
+            times: Vec::new(),
+            night: None,
+            night_reached: true,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -714,6 +742,406 @@ fn edits_blocked(w: &mut ScenarioWorld, report: String) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// US-10 — Aurora auto-edit
+// ---------------------------------------------------------------------------------------------
+
+/// The reference set's aurora photo over snow (scene ratio 0.78; on very dark land, as on
+/// _DSC3735, the land's colour correction has nothing to work on).
+const AURORA: (&str, u16) = ("_DSC7371.ARW", 2024);
+
+#[given("an unedited aurora photo")]
+fn unedited_aurora(w: &mut ScenarioWorld) {
+    day_photo(w, Some(AURORA));
+}
+
+#[given("an aurora photo the tool has edited in an undecided night")]
+fn aurora_undecided(w: &mut ScenarioWorld) {
+    day_photo(w, Some(AURORA));
+    start_tool(w);
+}
+
+#[given(expr = "an aurora photo the tool has edited in a {string} night")]
+fn aurora_in_night(w: &mut ScenarioWorld, colour: String) {
+    day_photo(w, Some(AURORA));
+    let tag = format!("{}{colour}", crate::nights::NIGHT_COLOUR_TAG);
+    w.with("tag", |d| d.tag(&tag));
+    start_tool(w);
+}
+
+#[then("its edit has the aurora look")]
+fn aurora_look(w: &mut ScenarioWorld) {
+    let h = edit(w);
+    for (op, name) in [
+        ("denoiseprofile", "photoflow chroma only"),
+        ("denoiseprofile", "photoflow luma 0.7"),
+        ("bilat", "photoflow clarity"),
+        ("bilat", "photoflow clarity 2"),
+        ("sigmoid", "photoflow sigmoid ACES"),
+        ("colorbalancergb", "photoflow vibrant colors"),
+    ] {
+        assert!(has_step(&h, op, name), "no {name}");
+    }
+}
+
+fn colour_named(name: &str) -> crate::aurora_edit::SkyColour {
+    match name {
+        "neutral blue" => crate::aurora_edit::SkyColour::NeutralBlue,
+        "blue-violet" => crate::aurora_edit::SkyColour::BlueViolet,
+        other => panic!("unknown sky colour {other}"),
+    }
+}
+
+fn assert_sky_colour(img: &crate::aurora::Image, name: &str) {
+    let (_, rg, bg) = crate::aurora_edit::sky_stats(img).unwrap();
+    let (tr, tb) = colour_named(name).target();
+    assert!(
+        (rg / tr).ln().abs() < 0.08 && (bg / tb).ln().abs() < 0.08,
+        "sky background R/G {rg:.3}, B/G {bg:.3}; {name} is {tr}, {tb}"
+    );
+}
+
+#[then(expr = "its sky sits at {float} in the edit's rendering")]
+fn sky_at(w: &mut ScenarioWorld, target: f64) {
+    let img = w.with("render the edit", |d| {
+        d.render(crate::aurora_edit::RENDER_SIZE)
+    });
+    let (l50, _, _) = crate::aurora_edit::sky_stats(&img).unwrap();
+    assert!(
+        (l50.log2() - target.log2()).abs() <= 0.12,
+        "sky at {l50:.3}, expected {target}"
+    );
+}
+
+#[then(expr = "its sky background is {string}")]
+fn sky_background(w: &mut ScenarioWorld, name: String) {
+    let img = w.with("render the edit", |d| {
+        d.render(crate::aurora_edit::RENDER_SIZE)
+    });
+    assert_sky_colour(&img, &name);
+}
+
+#[then("its edit has a colour correction masked to the land")]
+fn land_step(w: &mut ScenarioWorld) {
+    assert!(
+        has_step(&edit(w), "channelmixerrgb", "photoflow foreground"),
+        "no colour correction of the land"
+    );
+    let text = w.with("read the sidecar", |d| d.sidecar_text());
+    assert!(
+        text.contains(r#"darktable:mask_type="2""#) && text.contains("photoflow land"),
+        "no path along the skyline"
+    );
+}
+
+#[then(expr = "the land is {string} in the edit's rendering")]
+fn land_colour(w: &mut ScenarioWorld, name: String) {
+    assert_eq!(name, "slightly blue snow");
+    let img = w.with("render the edit", |d| {
+        d.render(crate::aurora_edit::RENDER_SIZE)
+    });
+    // the bottom fifth of the frame, well below this photo's horizon
+    let low = crate::horizon::Skyline {
+        columns: vec![Some(0.75); 96],
+    };
+    let (_, rg, bg) = crate::aurora_edit::land_stats(&img, &low).expect("land");
+    let (tr, tb) = crate::aurora_edit::LAND_TARGET;
+    assert!(
+        (rg / tr).ln().abs() < 0.1 && (bg / tb).ln().abs() < 0.1,
+        "land R/G {rg:.3}, B/G {bg:.3}; slightly blue snow is {tr}, {tb}"
+    );
+}
+
+#[then(expr = "it has a comparison duplicate whose sky background is {string}")]
+fn comparison_duplicate(w: &mut ScenarioWorld, name: String) {
+    let versions = w.with("list the duplicates", |d| d.versions());
+    let dup = versions
+        .iter()
+        .find(|v| {
+            v.1 > 0
+                && v.2
+                    .iter()
+                    .any(|t| t.starts_with(crate::nights::COMPARISON_TAG))
+        })
+        .unwrap_or_else(|| panic!("no comparison duplicate: {versions:?}"))
+        .0
+        .clone();
+    let img = w.with("render the duplicate", |d| {
+        d.render_version(&dup, crate::aurora_edit::RENDER_SIZE)
+    });
+    assert_sky_colour(&img, &name);
+}
+
+fn comparisons(w: &mut ScenarioWorld) -> usize {
+    w.with("list the duplicates", |d| d.versions())
+        .iter()
+        .filter(|v| {
+            v.1 > 0
+                && v.2
+                    .iter()
+                    .any(|t| t.starts_with(crate::nights::COMPARISON_TAG))
+        })
+        .count()
+}
+
+#[when(expr = "I tag it {string} and start the tool on the night's photos")]
+fn tag_and_start_night(w: &mut ScenarioWorld, tag: String) {
+    w.with("tag", |d| d.tag(&tag));
+    w.with("start the tool", |d| d.start_tool_on_versions());
+}
+
+#[given("I changed its comparison duplicate by hand")]
+fn change_duplicate(w: &mut ScenarioWorld) {
+    w.with("change the duplicate", |d| d.change_version(1));
+}
+
+#[then("its comparison duplicate is removed")]
+fn duplicate_removed(w: &mut ScenarioWorld) {
+    assert_eq!(comparisons(w), 0, "the comparison duplicate is still there");
+}
+
+#[then("its comparison duplicate is still there")]
+fn duplicate_kept(w: &mut ScenarioWorld) {
+    assert_eq!(comparisons(w), 1, "the comparison duplicate is gone");
+}
+
+#[when("the tool compares its foreground with its sky")]
+fn compares_foreground(w: &mut ScenarioWorld) {
+    let ctx = CLI
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("needs darktable-cli (self-test only)");
+    let raw = w.photo.clone().expect("a photo");
+    let check = ctx.check.render(&raw).unwrap_or_else(|e| panic!("{e:#}"));
+    w.sky_target = Some(crate::aurora_edit::sky_target(
+        crate::aurora_edit::scene_ratio(&check),
+    ));
+}
+
+#[then(expr = "its sky target is {float}")]
+fn sky_target_is(w: &mut ScenarioWorld, target: f64) {
+    assert_eq!(w.sky_target, Some(target));
+}
+
+#[given("an aurora photo without land")]
+fn aurora_without_land(w: &mut ScenarioWorld) {
+    w.skyline = Some(crate::horizon::Skyline {
+        columns: vec![Some(1.0); 96],
+    });
+}
+
+#[when("its aurora edit is built")]
+fn aurora_edit_built(w: &mut ScenarioWorld) {
+    // a render that already shows the sky at its target: solving ends at once
+    let (tr, tb) = crate::aurora_edit::SkyColour::NeutralBlue.target();
+    let g = (0.24 / (0.2126 * tr + 0.7152 + 0.0722 * tb)) as f32;
+    let px = [g * tr as f32, g, g * tb as f32];
+    let mut render = |_: &str| -> anyhow::Result<crate::aurora::Image> {
+        Ok(crate::aurora::Image {
+            width: 30,
+            height: 20,
+            rgb: px.iter().copied().cycle().take(30 * 20 * 3).collect(),
+        })
+    };
+    let line = w.skyline.clone().expect("a skyline");
+    let solved = crate::aurora_edit::solve(
+        AURORA_IMPORT,
+        crate::aurora_edit::SkyColour::NeutralBlue,
+        0.24,
+        Some(&line),
+        &mut render,
+    )
+    .unwrap_or_else(|e| panic!("{e:#}"));
+    w.aurora_xmp = Some(solved.xmp);
+}
+
+#[then("its edit has no colour correction for the land")]
+fn no_land_step(w: &mut ScenarioWorld) {
+    let h = crate::sidecar::parse(w.aurora_xmp.as_ref().expect("built")).unwrap();
+    assert!(
+        !h.steps.iter().any(|s| s.operation == "channelmixerrgb"),
+        "a land step without land"
+    );
+}
+
+/// "22:40, 01:15 the next day" → capture times in seconds (a fixed first day).
+fn times_of(text: &str) -> Vec<f64> {
+    let day0 = 86400.0 * 20000.0;
+    text.split(',')
+        .map(|t| {
+            let t = t.trim();
+            let (clock, next) = match t.strip_suffix(" the next day") {
+                Some(c) => (c, 1.0),
+                None => (t, 0.0),
+            };
+            let (h, m) = clock.split_once(':').expect("hh:mm");
+            day0 + next * 86400.0
+                + h.parse::<f64>().unwrap() * 3600.0
+                + m.parse::<f64>().unwrap() * 60.0
+        })
+        .collect()
+}
+
+#[given(expr = "aurora photos taken at {}")]
+fn photos_taken_at(w: &mut ScenarioWorld, times: String) {
+    w.times = times_of(&times);
+}
+
+#[then(expr = "they belong to {}")]
+fn belong_to(w: &mut ScenarioWorld, nights: String) {
+    let mut n: Vec<i64> = w.times.iter().map(|&t| crate::nights::night(t)).collect();
+    n.dedup();
+    let want = match nights.as_str() {
+        "one night" => 1,
+        "two nights" => 2,
+        other => panic!("unknown: {other}"),
+    };
+    assert_eq!(n.len(), want, "nights {n:?}");
+}
+
+/// A simulated night: aurora photos a minute apart, edited without rendering.
+struct NightTools {
+    reached: bool,
+}
+
+const AURORA_IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description xmlns:darktable="http://darktable.sf.net/" darktable:history_end="1" darktable:iop_order_version="4">
+<darktable:history><rdf:Seq>
+<rdf:li darktable:num="0" darktable:operation="temperature" darktable:enabled="1" darktable:modversion="4" darktable:params="0000004000000040000000400000000004000000" darktable:multi_name="" darktable:multi_priority="0"/>
+</rdf:Seq></darktable:history></rdf:Description></rdf:RDF></x:xmpmeta>"#;
+
+impl crate::process::Tools for NightTools {
+    fn classify(&mut self, _: &crate::process::Photo) -> anyhow::Result<Class> {
+        Ok(Class::Aurora)
+    }
+    fn sidecar_text(&mut self, _: &crate::process::Photo) -> anyhow::Result<String> {
+        Ok(AURORA_IMPORT.to_string())
+    }
+    fn day_edit(
+        &mut self,
+        _: &crate::process::Photo,
+        _: &str,
+        _: crate::day_edit::Wanted,
+    ) -> anyhow::Result<crate::day_edit::Solved> {
+        unreachable!()
+    }
+    fn clipped_share(&mut self, _: &crate::process::Photo) -> anyhow::Result<f64> {
+        unreachable!()
+    }
+    fn aurora_edit(
+        &mut self,
+        _: &crate::process::Photo,
+        sidecar: &str,
+        _: crate::aurora_edit::SkyColour,
+    ) -> anyhow::Result<crate::aurora_edit::Solved> {
+        let params = crate::aurora_edit::Params {
+            ev: 1.0,
+            wb: (2.4, 2.0),
+            land: None,
+        };
+        Ok(crate::aurora_edit::Solved {
+            xmp: crate::aurora_edit::build(sidecar, &params)?,
+            params,
+            reached: self.reached,
+        })
+    }
+    fn write_edit(&mut self, p: &crate::process::Photo, _: &str) -> anyhow::Result<PathBuf> {
+        Ok(p.sidecar.with_extension("edit.xmp"))
+    }
+    fn capture(&mut self, p: &crate::process::Photo) -> anyhow::Result<crate::exif::Capture> {
+        let minute: f64 = p.raw.file_stem().unwrap().to_str().unwrap().parse()?;
+        Ok(crate::exif::Capture {
+            time: 86400.0 * 20000.0 + 21.0 * 3600.0 + 60.0 * minute,
+            focal_mm: Some(14.0 + minute), // no panorama proposals
+        })
+    }
+    fn edits_blocked(&mut self) -> anyhow::Result<Option<String>> {
+        Ok(None)
+    }
+}
+
+fn night_of(w: &mut ScenarioWorld, tags: &[Vec<String>]) {
+    let photos = tags
+        .iter()
+        .enumerate()
+        .map(|(i, t)| crate::process::Photo {
+            raw: PathBuf::from(format!("/night/{}.ARW", i + 1)),
+            sidecar: PathBuf::from(format!("/night/{}.ARW.xmp", i + 1)),
+            altered: false,
+            tags: t.clone(),
+        })
+        .collect();
+    w.night = Some((
+        crate::process::Handover {
+            darkroom_open: false,
+            photos,
+        },
+        Vec::new(),
+    ));
+}
+
+fn plan_night(w: &mut ScenarioWorld) {
+    let mut tools = NightTools {
+        reached: w.night_reached,
+    };
+    let (h, plan) = w.night.as_mut().expect("a night");
+    *plan = crate::process::plan(h, &mut tools);
+}
+
+#[given(expr = "a night of {int} aurora photos")]
+fn night_of_n(w: &mut ScenarioWorld, n: usize) {
+    night_of(w, &vec![Vec::new(); n]);
+    plan_night(w);
+}
+
+#[then(expr = "photos {} of them get a comparison duplicate")]
+fn picked_photos(w: &mut ScenarioWorld, picked: String) {
+    let want: Vec<usize> = picked
+        .split(',')
+        .map(|x| x.trim().parse().unwrap())
+        .collect();
+    let (_, plan) = w.night.as_ref().expect("planned");
+    let got: Vec<usize> = plan
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, s))| {
+            s.iter()
+                .any(|s| matches!(s, crate::process::Step::Duplicate { .. }))
+        })
+        .map(|(i, _)| i + 1)
+        .collect();
+    assert_eq!(got, want);
+}
+
+#[given(expr = "a night whose photos are tagged {string} and {string}")]
+fn night_tagged(w: &mut ScenarioWorld, a: String, b: String) {
+    night_of(w, &[vec![a], vec![b]]);
+}
+
+#[given("an aurora photo whose sky can't reach its target brightness")]
+fn sky_unreachable(w: &mut ScenarioWorld) {
+    w.night_reached = false;
+    night_of(w, &[Vec::new()]);
+}
+
+#[when("the night's photos are processed")]
+fn night_processed(w: &mut ScenarioWorld) {
+    plan_night(w);
+}
+
+#[then("they get no comparison duplicates")]
+fn no_comparisons(w: &mut ScenarioWorld) {
+    let (_, plan) = w.night.as_ref().expect("planned");
+    assert!(
+        !plan.iter().any(|(_, s)| s
+            .iter()
+            .any(|s| matches!(s, crate::process::Step::Duplicate { .. }))),
+        "comparison duplicates"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
 // US-23 — Horizon line per photo
 // ---------------------------------------------------------------------------------------------
 
@@ -854,6 +1282,17 @@ fn quick_succession(w: &mut ScenarioWorld) {
 
 #[then(expr = "the open step {string} lists them")]
 fn open_step_lists_them(w: &mut ScenarioWorld, name: String) {
+    let tag = format!("{}{name}", crate::process::OPEN_TAG);
+    if let Some((_, plan)) = &w.night {
+        for (photo, steps) in plan {
+            assert!(
+                steps.contains(&crate::process::Step::Tag(tag.clone())),
+                "{} not on the open step {name:?}",
+                photo.display()
+            );
+        }
+        return;
+    }
     let f = w.folder.clone();
     let tag = format!("{}{name}", crate::process::OPEN_TAG);
     for tags in folder_tags(w, &f) {
@@ -1127,8 +1566,8 @@ mod tests {
 
     #[test]
     fn only_narrows_the_selection() {
-        assert_eq!(count(Selection::DarktableCli, Some("aurora")), 2);
-        assert_eq!(count(Selection::Darktable, Some("aurora")), 0);
+        assert_eq!(count(Selection::DarktableCli, Some("night sky")), 2);
+        assert_eq!(count(Selection::Darktable, Some("night sky")), 0);
         assert_eq!(count(Selection::Darktable, Some("SECOND RUN")), 1);
         assert!(count(Selection::Darktable, Some("us-09")) > 5);
         assert_eq!(

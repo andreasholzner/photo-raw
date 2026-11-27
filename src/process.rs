@@ -641,7 +641,13 @@ impl Tools for RealTools<'_> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let path = dir.join(name);
+        // photos of the same name in different folders can be handed over together
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(&p.sidecar, &mut h);
+        let path = dir.join(format!(
+            "{:08x}-{name}",
+            std::hash::Hasher::finish(&h) as u32
+        ));
         std::fs::write(&path, xmp)?;
         Ok(path)
     }
