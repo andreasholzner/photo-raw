@@ -1622,3 +1622,7 @@ checks in the job's work folder.
   1.2 % below the skyline. Hard edges with an overlap had left a jagged dark seam along
   _DSC0905's distant ridge above the brightened sea of fog; the cross-fade removes it, and
   _DSC4746 and DSC00458 stay without seams (a faint rim on DSC00458's left cliff).
+- **Owner's verdict:** foregrounds a little too bright, the mask boundary looks odd where the
+  skyline misses; an edit that needs no manual work isn't realistic — a good starting point is
+  enough. Changed once: foreground target 0.10 → 0.07, cross-fade 1.2 % → 3 % of the frame
+  height. Renders `photo-edits/_us21/tool2/` (previous set in `tool/`).

@@ -27,8 +27,9 @@ pub const STAR_TARGET: (f64, f64) = (0.95, 1.12);
 /// favourite edits (round 13).
 pub const DARK_SKY_TARGET: (f64, f64) = (-0.0878, 0.1981);
 pub const MILKY_WAY_TARGET: (f64, f64) = (-0.1219, 0.1738);
-/// The foreground's brightness and colour (round 13, K1).
-pub const LAND_TARGET: (f64, f64, f64) = (0.10, 1.0, 1.0);
+/// The foreground's brightness and colour (round 13, K1; brightness lowered from 0.10 by the
+/// owner, 2026-11-27: the owner's own night foregrounds are 0.04–0.09).
+pub const LAND_TARGET: (f64, f64, f64) = (0.07, 1.0, 1.0);
 /// A sky median at or above this on the aurora check render is twilight or blue hour, not a
 /// night sky: no automatic edit (owner, 2026-11-27; twilight 0.20–0.62, the brightest star
 /// photo, a moonrise, 0.17).
@@ -52,8 +53,9 @@ const SKY_PATH: &str = "1710017177";
 const LAND_PATH: &str = "1810017177";
 /// The masks cross-fade below the skyline (accurate to about 1 % of the frame): the sky's fades
 /// out over this band, the land's fades in over the same band. Hard or overlapping edges left
-/// seams along distant ridges where the land's step is large (journal 2026-11-27).
-const FADE: f32 = 0.012;
+/// seams along distant ridges where the land's step is large; a wide band blurs the boundary
+/// where the skyline misses (journal 2026-11-27).
+const FADE: f32 = 0.03;
 /// color balance rgb: chroma and hue (degrees) of the shadows and midtones wheels (float indices).
 const SHADOWS_C: usize = 1;
 const MIDTONES_C: usize = 4;

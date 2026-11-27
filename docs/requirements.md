@@ -285,8 +285,9 @@ photos against the tool's previous output, and the upgrade block of US-9 applies
 
 **Notes:** The look to aim for is the owner's edits of DSC00461 (2018), _DSC0905, _DSC0909,
 _DSC0914, _DSC0926 (2018) and _DSC4743 (2020) — their result, not their editing steps. The foreground targets came from those edits. Without the owner's edit of a photo, the sky
-tints aim at the median of the six favourite edits, and the foreground gets a brightness of 0.10
-and a colour correction to neutral (journal 2026-11-27, round 13: K1). A "night" photo with a
+tints aim at the median of the six favourite edits, and the foreground gets a brightness of 0.07
+and a colour correction to neutral (journal 2026-11-27, round 13: K1; lowered from 0.10 by the
+owner). A "night" photo with a
 bright sky (blue hour, twilight) gets no automatic edit but the open step "night: check look"
 (owner, 2026-11-27): a sky median of at least 0.19 on the aurora check render (twilight 0.20–0.62,
 the brightest star photo, a moonrise, 0.17); light pollution near the horizon stays with the
