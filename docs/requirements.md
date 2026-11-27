@@ -43,7 +43,7 @@ The stories of a step are worked on in parallel: those that wait for long render
 
 | Step | Rendering-heavy     | Code-only            | Why here                                                                    |
 |------|---------------------|----------------------|-----------------------------------------------------------------------------|
-| 5    | US-10, US-21        | US-14                | The aurora and night edits need the horizon line; the panorama sets are used through the to-do panel |
+| 5    | US-21               | US-14                | The aurora and night edits need the horizon line; the panorama sets are used through the to-do panel |
 | 6    | US-13, US-11        | US-17, US-16, US-15  | Stitching and the gradient filter (it needs the horizon line too); installation, export and the collection status make it usable day to day |
 | 7    | US-19               |                      | Own edits after a darktable upgrade: needs a darktable release to test against |
 
@@ -64,7 +64,7 @@ Stories are grouped by the part of the workflow they are about; a story's ID nev
 | [US-7](#us-7--classify-day-night-and-aurora)                    | ✅     | Classify day, night and aurora                 | [Automatic editing](#automatic-editing)         |
 | [US-8](#us-8--only-touch-what-was-handed-over)                  | ✅     | Only touch what was handed over                | [Automatic editing](#automatic-editing)         |
 | [US-9](#us-9--day-auto-edit)                                    | ✅     | Day auto-edit                                  | [Automatic editing](#automatic-editing)         |
-| [US-10](#us-10--aurora-auto-edit)                               | 🚧     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
+| [US-10](#us-10--aurora-auto-edit)                               | ✅     | Aurora auto-edit                               | [Automatic editing](#automatic-editing)         |
 | [US-11](#us-11--gradient-filter-proposal)                       | 📋     | Gradient filter proposal                       | [Automatic editing](#automatic-editing)         |
 | [US-12](#us-12--panorama-sets)                                  | ✅     | Panorama sets                                  | [Panoramas](#panoramas)                         |
 | [US-13](#us-13--stitch-panoramas)                               | 📋     | Stitch panoramas                               | [Panoramas](#panoramas)                         |
@@ -233,7 +233,7 @@ at 0.885). Dehaze is off by default; proposing it for long-range views is US-22.
 
 ### US-10 — Aurora auto-edit
 
-**In progress 🚧** — As the owner, I want aurora photos edited to show how the aurora felt — bright and
+**Done ✅** — As the owner, I want aurora photos edited to show how the aurora felt — bright and
 colourful, not neon — so I can cull after editing.
 
 **Acceptance criteria:** [us-10-aurora-auto-edit.feature](../features/us-10-aurora-auto-edit.feature).
