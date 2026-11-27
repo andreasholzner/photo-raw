@@ -44,6 +44,10 @@ pub const FEATURES: &[(&str, &str)] = &[
         include_str!("../../features/us-12-panorama-sets.feature"),
     ),
     (
+        "us-21-night-auto-edit.feature",
+        include_str!("../../features/us-21-night-auto-edit.feature"),
+    ),
+    (
         "us-23-horizon-line-per-photo.feature",
         include_str!("../../features/us-23-horizon-line-per-photo.feature"),
     ),
@@ -158,6 +162,9 @@ pub struct ScenarioWorld {
     times: Vec<f64>,
     night: Option<(crate::process::Handover, Plan)>,
     night_reached: bool,
+    /// US-21: the night planned is of night photos with a bright sky; a sky's verdict.
+    night_bright: bool,
+    sky_bright: Option<bool>,
     /// US-23: the skyline the tool found.
     skyline: Option<crate::horizon::Skyline>,
     /// US-12: photos for the proposal rule (gaps, focal lengths), and the proposals' sizes.
@@ -201,6 +208,8 @@ impl ScenarioWorld {
             times: Vec::new(),
             night: None,
             night_reached: true,
+            night_bright: false,
+            sky_bright: None,
             // without a configured driver every scenario gets a fresh simulated darktable
             driver: driver.unwrap_or_else(|| Arc::new(Mutex::new(sim::Sim::default()))),
         }
@@ -1002,6 +1011,8 @@ fn belong_to(w: &mut ScenarioWorld, nights: String) {
 /// A simulated night: aurora photos a minute apart, edited without rendering.
 struct NightTools {
     reached: bool,
+    /// Night photos without aurora (with a bright sky) instead of aurora photos.
+    night: bool,
 }
 
 const AURORA_IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1013,7 +1024,11 @@ const AURORA_IMPORT: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 
 impl crate::process::Tools for NightTools {
     fn classify(&mut self, _: &crate::process::Photo) -> anyhow::Result<Class> {
-        Ok(Class::Aurora)
+        Ok(if self.night {
+            Class::Night
+        } else {
+            Class::Aurora
+        })
     }
     fn sidecar_text(&mut self, _: &crate::process::Photo) -> anyhow::Result<String> {
         Ok(AURORA_IMPORT.to_string())
@@ -1028,6 +1043,13 @@ impl crate::process::Tools for NightTools {
     }
     fn clipped_share(&mut self, _: &crate::process::Photo) -> anyhow::Result<f64> {
         unreachable!()
+    }
+    fn night_edit(
+        &mut self,
+        _: &crate::process::Photo,
+        _: &str,
+    ) -> anyhow::Result<Option<crate::night_edit::Solved>> {
+        Ok(None) // a bright sky
     }
     fn aurora_edit(
         &mut self,
@@ -1084,6 +1106,7 @@ fn night_of(w: &mut ScenarioWorld, tags: &[Vec<String>]) {
 fn plan_night(w: &mut ScenarioWorld) {
     let mut tools = NightTools {
         reached: w.night_reached,
+        night: w.night_bright,
     };
     let (h, plan) = w.night.as_mut().expect("a night");
     *plan = crate::process::plan(h, &mut tools);
@@ -1138,6 +1161,122 @@ fn no_comparisons(w: &mut ScenarioWorld) {
             .iter()
             .any(|s| matches!(s, crate::process::Step::Duplicate { .. }))),
         "comparison duplicates"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// US-21 — Night auto-edit
+// ---------------------------------------------------------------------------------------------
+
+#[given("an unedited night photo")]
+fn unedited_night(w: &mut ScenarioWorld) {
+    // stars over a summit cross, a thin strip of land
+    day_photo(w, Some(("_DSC0906.ARW", 2018)));
+}
+
+#[then("its edit has the night look")]
+fn night_look(w: &mut ScenarioWorld) {
+    let h = edit(w);
+    for (op, name) in [
+        ("cacorrect", "photoflow raw chromatic aberrations"),
+        ("denoiseprofile", "photoflow chroma only"),
+        ("denoiseprofile", "photoflow luma 0.7"),
+        ("bilat", "photoflow clarity"),
+        ("bilat", "photoflow clarity 2"),
+        ("diffuse", "photoflow local contrast fine"),
+        ("toneequal", "photoflow star punch"),
+        ("tonecurve", "photoflow star brightness"),
+        ("colorbalancergb", "photoflow sky tint"),
+        ("agx", "photoflow AgX punchy"),
+    ] {
+        assert!(has_step(&h, op, name), "no {name}");
+    }
+}
+
+#[then("its edit has a brightness step and a colour correction masked to the land")]
+fn night_land_steps(w: &mut ScenarioWorld) {
+    let h = edit(w);
+    assert!(
+        has_step(&h, "toneequal", "photoflow foreground brightness"),
+        "no brightness step"
+    );
+    assert!(
+        has_step(&h, "channelmixerrgb", "photoflow foreground colour"),
+        "no colour correction"
+    );
+    let text = w.with("read the sidecar", |d| d.sidecar_text());
+    assert!(text.contains("photoflow land"), "no land mask");
+}
+
+#[when("the tool looks at its sky")]
+fn looks_at_sky(w: &mut ScenarioWorld) {
+    let ctx = CLI
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("needs darktable-cli (self-test only)");
+    let raw = w.photo.clone().expect("a photo");
+    let check = ctx.check.render(&raw).unwrap_or_else(|e| panic!("{e:#}"));
+    w.sky_bright = Some(crate::night_edit::bright_sky(&check));
+}
+
+#[then(expr = "its sky counts as {word}")]
+fn sky_counts_as(w: &mut ScenarioWorld, what: String) {
+    let want = match what.as_str() {
+        "bright" => true,
+        "dark" => false,
+        other => panic!("unknown: {other}"),
+    };
+    assert_eq!(w.sky_bright, Some(want));
+}
+
+#[given("a night photo with a bright sky")]
+fn night_bright_sky(w: &mut ScenarioWorld) {
+    w.night_bright = true;
+    night_of(w, &[Vec::new()]);
+}
+
+#[then("the photo gets no automatic edit")]
+fn no_automatic_edit(w: &mut ScenarioWorld) {
+    let (_, plan) = w.night.as_ref().expect("planned");
+    assert!(
+        !plan.iter().any(|(_, s)| s
+            .iter()
+            .any(|s| matches!(s, crate::process::Step::Apply(_)))),
+        "an edit was applied"
+    );
+}
+
+#[given("a night photo without land")]
+fn night_without_land(w: &mut ScenarioWorld) {
+    aurora_without_land(w);
+}
+
+#[when("its night edit is built")]
+fn night_edit_built(w: &mut ScenarioWorld) {
+    // a render that already shows the sky at its target and nothing else to solve for
+    let g = (crate::night_edit::SKY_TARGET) as f32;
+    let mut render = |_: &str, _: u32| -> anyhow::Result<crate::aurora::Image> {
+        Ok(crate::aurora::Image {
+            width: 30,
+            height: 20,
+            rgb: vec![g; 30 * 20 * 3],
+        })
+    };
+    let line = w.skyline.clone().expect("a skyline");
+    let solved = crate::night_edit::solve(AURORA_IMPORT, &line, &mut render)
+        .unwrap_or_else(|e| panic!("{e:#}"));
+    w.aurora_xmp = Some(solved.xmp);
+}
+
+#[then("its edit has no steps for the land")]
+fn no_land_steps(w: &mut ScenarioWorld) {
+    let h = crate::sidecar::parse(w.aurora_xmp.as_ref().expect("built")).unwrap();
+    assert!(
+        !h.steps
+            .iter()
+            .any(|s| s.multi_name.starts_with("photoflow foreground")),
+        "land steps without land"
     );
 }
 

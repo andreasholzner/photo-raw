@@ -242,6 +242,13 @@ impl process::Tools for SimTools {
     fn clipped_share(&mut self, _: &process::Photo) -> Result<f64> {
         Ok(0.0)
     }
+    fn night_edit(
+        &mut self,
+        _: &process::Photo,
+        _: &str,
+    ) -> Result<Option<crate::night_edit::Solved>> {
+        anyhow::bail!("night photos aren't simulated")
+    }
     fn aurora_edit(
         &mut self,
         _: &process::Photo,

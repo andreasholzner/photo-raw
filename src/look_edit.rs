@@ -303,21 +303,22 @@ fn along(skyline: &Skyline, offset: f32) -> Vec<(f32, f32)> {
 pub fn land_path(skyline: &Skyline, offset: f32) -> Vec<(f32, f32)> {
     let mut pts = along(skyline, offset);
     let (y0, y1) = (pts[0].1, pts[PATH_POINTS - 1].1);
-    pts.insert(0, (-0.05, y0));
-    pts.push((1.05, y1));
-    pts.push((1.05, 1.05));
-    pts.push((-0.05, 1.05));
+    // corners on the frame's edge: the feather then lies outside the frame
+    pts.insert(0, (0.0, y0));
+    pts.push((1.0, y1));
+    pts.push((1.0, 1.0));
+    pts.push((0.0, 1.0));
     pts
 }
 
-/// The sky as a closed polygon: along the skyline, then around the top outside the frame.
-pub fn sky_path(skyline: &Skyline) -> Vec<(f32, f32)> {
-    let mut pts = along(skyline, 0.0);
+/// The sky as a closed polygon: along the skyline, `margin` above it, then around the top.
+pub fn sky_path(skyline: &Skyline, margin: f32) -> Vec<(f32, f32)> {
+    let mut pts = along(skyline, -margin);
     let (y0, y1) = (pts[0].1, pts[PATH_POINTS - 1].1);
-    pts.insert(0, (-0.05, y0));
-    pts.push((1.05, y1));
-    pts.push((1.05, -0.05));
-    pts.push((-0.05, -0.05));
+    pts.insert(0, (0.0, y0));
+    pts.push((1.0, y1));
+    pts.push((1.0, 0.0));
+    pts.push((0.0, 0.0));
     pts
 }
 
@@ -337,9 +338,9 @@ mod tests {
     fn the_paths_follow_the_skyline_and_close_outside_the_frame() {
         let land = land_path(&line(), 0.01);
         assert!((land[1].1 - 0.61).abs() < 1e-6 && (land[PATH_POINTS].1 - 0.71).abs() < 1e-6);
-        assert_eq!(land[land.len() - 1], (-0.05, 1.05));
-        let sky = sky_path(&line());
-        assert!((sky[1].1 - 0.6).abs() < 1e-6);
-        assert_eq!(sky[sky.len() - 1], (-0.05, -0.05));
+        assert_eq!(land[land.len() - 1], (0.0, 1.0));
+        let sky = sky_path(&line(), 0.01);
+        assert!((sky[1].1 - 0.59).abs() < 1e-6);
+        assert_eq!(sky[sky.len() - 1], (0.0, 0.0));
     }
 }

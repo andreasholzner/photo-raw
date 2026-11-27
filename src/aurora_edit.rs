@@ -436,7 +436,7 @@ mod tests {
     fn the_path_follows_the_skyline_and_closes_below_the_frame() {
         let pts = land_path(&line());
         assert!((pts[1].1 - 0.61).abs() < 1e-6 && (pts[PATH_POINTS].1 - 0.71).abs() < 1e-6);
-        assert_eq!(pts[pts.len() - 1], (-0.05, 1.05));
+        assert_eq!(pts[pts.len() - 1], (0.0, 1.0));
     }
 
     #[test]

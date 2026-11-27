@@ -324,7 +324,89 @@ impl Finder {
         }
         let large = renders.pop().context("no render")?;
         let small = renders.pop().context("no render")?;
-        Ok((self.model.skyline(&small, &large)?, large))
+        let mut line = self.model.skyline(&small, &large)?;
+        fill_edges(&mut line);
+        snap(&mut line, &large);
+        Ok((line, large))
+    }
+}
+
+/// A run of columns at the frame's side, at most this share of the width, whose skyline drops
+/// by more than [`EDGE_DROP`] next to the rest is land: the model takes dark, vignetted corners
+/// for night sky (US-21).
+const EDGE_RUN: f32 = 0.08;
+const EDGE_DROP: f32 = 0.15;
+
+fn fill_edges(line: &mut Skyline) {
+    let n = line.columns.len();
+    let max = (n as f32 * EDGE_RUN) as usize;
+    let y = |c: Option<f32>| c.unwrap_or(0.0);
+    for from_left in [true, false] {
+        let idx = |i: usize| if from_left { i } else { n - 1 - i };
+        // the first column (from this side) whose skyline is well above the side's
+        let side = y(line.columns[idx(0)]);
+        let Some(run) = (1..=max.min(n - 1)).find(|&i| y(line.columns[idx(i)]) < side - EDGE_DROP)
+        else {
+            continue;
+        };
+        let neighbour = line.columns[idx(run)];
+        for i in 0..run {
+            if y(line.columns[idx(i)]) > y(neighbour) + EDGE_DROP {
+                line.columns[idx(i)] = neighbour;
+            }
+        }
+    }
+}
+
+/// How far (fraction of the frame height) a skyline point may move to the nearest edge.
+const SNAP: f32 = 0.012;
+/// … and only to an edge this much stronger than the one at the model's point.
+const SNAP_GAIN: f32 = 1.5;
+
+/// Moves each point of the skyline to the strongest brightness edge within [`SNAP`] of it, on
+/// the large render: the model's grid is coarse, and a mask edge a little below the ridge shows
+/// as a bright strip once the land is darkened (US-21).
+fn snap(line: &mut Skyline, img: &Image) {
+    let (w, h) = (img.width, img.height);
+    let n = line.columns.len();
+    let lum = |x: usize, y: usize| {
+        let k = 3 * (y * w + x);
+        (0.2126 * img.rgb[k] + 0.7152 * img.rgb[k + 1] + 0.0722 * img.rgb[k + 2])
+            .max(1e-5)
+            .ln()
+    };
+    let k = 2; // rows averaged on each side of an edge
+    for (i, c) in line.columns.iter_mut().enumerate() {
+        let Some(y) = *c else { continue };
+        if y >= 1.0 - 2.0 * SNAP {
+            continue; // no land, or only a strip at the bottom
+        }
+        let (x0, x1) = (i * w / n, ((i + 1) * w / n).max(i * w / n + 1));
+        let profile: Vec<f32> = (0..h)
+            .map(|yy| (x0..x1).map(|x| lum(x, yy)).sum::<f32>() / (x1 - x0) as f32)
+            .collect();
+        let centre = (y * h as f32) as isize;
+        let reach = (SNAP * h as f32) as isize;
+        let step_at = |yy: usize| {
+            let above: f32 = profile[yy - k..yy].iter().sum::<f32>() / k as f32;
+            let below: f32 = profile[yy..yy + k].iter().sum::<f32>() / k as f32;
+            (above - below).abs()
+        };
+        let (lo, hi) = (k as isize, (h - k) as isize);
+        if centre < lo || centre >= hi {
+            continue;
+        }
+        let here = step_at(centre as usize);
+        let mut best = (here, centre);
+        for yy in (centre - reach).max(lo)..(centre + reach).min(hi) {
+            let step = step_at(yy as usize);
+            if step > best.0 {
+                best = (step, yy);
+            }
+        }
+        if best.0 > SNAP_GAIN * here {
+            *c = Some(best.1 as f32 / h as f32);
+        }
     }
 }
 
@@ -387,6 +469,25 @@ mod tests {
         assert!(s.has_land());
         assert_eq!(s.middle(), Some(0.75));
         assert_eq!(s.extent(), Some((0.5, 0.75)));
+    }
+
+    #[test]
+    fn a_short_drop_at_the_frames_side_is_land() {
+        let mut line = Skyline {
+            columns: (0..100)
+                .map(|i| Some(if i < 5 { 0.9 } else { 0.6 }))
+                .collect(),
+        };
+        fill_edges(&mut line);
+        assert_eq!(line.columns[0], Some(0.6));
+        // a long run is real sky (a lake shore, the open sea)
+        let mut open = Skyline {
+            columns: (0..100)
+                .map(|i| Some(if i < 30 { 1.0 } else { 0.6 }))
+                .collect(),
+        };
+        fill_edges(&mut open);
+        assert_eq!(open.columns[0], Some(1.0));
     }
 
     #[test]

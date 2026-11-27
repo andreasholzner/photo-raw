@@ -86,6 +86,10 @@ pub trait Tools {
         sidecar: &str,
         colour: crate::aurora_edit::SkyColour,
     ) -> Result<crate::aurora_edit::Solved>;
+    /// Solves the night edit by rendering (US-21); `None` when the sky is too bright for it
+    /// (twilight, blue hour).
+    fn night_edit(&mut self, p: &Photo, sidecar: &str)
+    -> Result<Option<crate::night_edit::Solved>>;
     /// Writes an edit for darktable to apply, named after the photo's sidecar; returns its path.
     fn write_edit(&mut self, p: &Photo, xmp: &str) -> Result<PathBuf>;
     /// When and with which focal length the photo was taken (US-12).
@@ -98,6 +102,8 @@ pub trait Tools {
 pub const CHECK_EXPOSURE: &str = "check exposure";
 pub const SNOW_CHECK_LOOK: &str = "snow: check look";
 pub const LOOK_CONFLICT: &str = "look: agx or sigmoid?";
+/// US-21: a night photo whose sky is too bright for the night edit.
+pub const NIGHT_CHECK_LOOK: &str = "night: check look";
 
 pub fn parse_handover(text: &str) -> Result<Handover> {
     let mut darkroom_open = None;
@@ -337,9 +343,8 @@ fn decide(
         return decide_aurora(p, tools, &state, &history, night, aurora_original);
     }
     let mut steps = vec![Step::Clear, tag(format!("{CLASS_TAG}{class}"))];
-    if class != "day" {
-        // the night edit comes with US-21
-        return Ok(Some(steps));
+    if class == "night" {
+        return decide_night(p, tools, &state, &history, steps);
     }
 
     // US-9: the day edit
@@ -376,6 +381,40 @@ fn decide(
     }
     if solved.snow && switches.look.is_none() {
         steps.push(tag(format!("{OPEN_TAG}{SNOW_CHECK_LOOK}")));
+    }
+    Ok(Some(steps))
+}
+
+/// The steps for a night photo (US-21): the night edit, unless the tool's night edit is already
+/// there or the sky is too bright for it.
+fn decide_night(
+    p: &Photo,
+    tools: &mut dyn Tools,
+    state: &EditState,
+    history: &sidecar::History,
+    mut steps: Vec<Step>,
+) -> Result<Option<Vec<Step>>> {
+    let own_night = history
+        .steps
+        .iter()
+        .any(|s| s.operation == "toneequal" && s.multi_name == "photoflow star punch");
+    if *state == EditState::OwnEdit && own_night {
+        return Ok(None);
+    }
+    if let Some(why) = tools.edits_blocked()? {
+        steps.push(Step::Tag(format!("{LEFT_TAG}{why}")));
+        return Ok(Some(steps));
+    }
+    let text = tools.sidecar_text(p)?;
+    let Some(solved) = tools.night_edit(p, &text)? else {
+        steps.push(Step::Tag(format!("{OPEN_TAG}{NIGHT_CHECK_LOOK}")));
+        return Ok(Some(steps));
+    };
+    let path = tools.write_edit(p, &solved.xmp)?;
+    steps.insert(1, Step::Apply(path));
+    steps.push(Step::Tag(edit_tag(&sidecar::parse(&solved.xmp)?)));
+    if !solved.reached {
+        steps.push(Step::Tag(format!("{OPEN_TAG}{CHECK_EXPOSURE}")));
     }
     Ok(Some(steps))
 }
@@ -598,6 +637,22 @@ impl Tools for RealTools<'_> {
         day_edit::solve(sidecar, wanted, |xmp| self.render_edit(&raw, xmp))
     }
 
+    fn night_edit(
+        &mut self,
+        p: &Photo,
+        sidecar: &str,
+    ) -> Result<Option<crate::night_edit::Solved>> {
+        let raw = p.raw.clone();
+        if crate::night_edit::bright_sky(&self.aurora_check()?.render(&raw)?) {
+            return Ok(None);
+        }
+        let (line, _) = self.aurora_scene(&raw)?;
+        crate::night_edit::solve(sidecar, &line, &mut |xmp, size| {
+            self.render_at(&raw, xmp, "night", size)
+        })
+        .map(Some)
+    }
+
     fn aurora_edit(
         &mut self,
         p: &Photo,
@@ -754,6 +809,10 @@ mod tests {
         fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
             Ok(if self.reached { 0.0 } else { 0.01 })
         }
+        /// Night photos count as having a bright sky: no night edit without rendering.
+        fn night_edit(&mut self, _: &Photo, _: &str) -> Result<Option<crate::night_edit::Solved>> {
+            Ok(None)
+        }
         fn aurora_edit(
             &mut self,
             _: &Photo,
@@ -821,6 +880,7 @@ mod tests {
         assert_eq!(
             format_plan(&p),
             "/p/a.ARW.xmp\tclear\n/p/a.ARW.xmp\ttag\tphotoflow|class|night\n\
+             /p/a.ARW.xmp\ttag\tphotoflow|open|night: check look\n\
              /p/b.ARW.xmp\tclear\n/p/b.ARW.xmp\ttag\tphotoflow|open|day or night?\n"
         );
     }
@@ -847,6 +907,9 @@ mod tests {
             unreachable!()
         }
         fn clipped_share(&mut self, _: &Photo) -> Result<f64> {
+            unreachable!()
+        }
+        fn night_edit(&mut self, _: &Photo, _: &str) -> Result<Option<crate::night_edit::Solved>> {
             unreachable!()
         }
         fn aurora_edit(
@@ -1115,6 +1178,13 @@ mod tests {
             fn write_edit(&mut self, _: &Photo, _: &str) -> Result<PathBuf> {
                 panic!("re-edited")
             }
+            fn night_edit(
+                &mut self,
+                _: &Photo,
+                _: &str,
+            ) -> Result<Option<crate::night_edit::Solved>> {
+                unreachable!()
+            }
             fn aurora_edit(
                 &mut self,
                 _: &Photo,
@@ -1220,6 +1290,13 @@ mod tests {
             }
             fn edits_blocked(&mut self) -> Result<Option<String>> {
                 Ok(None)
+            }
+            fn night_edit(
+                &mut self,
+                _: &Photo,
+                _: &str,
+            ) -> Result<Option<crate::night_edit::Solved>> {
+                Ok(None) // no night edit without rendering
             }
             fn aurora_edit(
                 &mut self,

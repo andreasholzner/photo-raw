@@ -15,6 +15,7 @@ pub mod horizon;
 pub mod image_diff;
 pub mod locate;
 pub mod look_edit;
+pub mod night_edit;
 pub mod nights;
 pub mod panorama;
 pub mod process;

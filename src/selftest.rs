@@ -92,7 +92,7 @@ fn run_renders(cfg: &Config) -> Result<bool> {
     for p in &set {
         let name = tool_png_name(p);
         if dirs.reference.join(&name).is_file() || dirs.current.join(&name).is_file() {
-            checks.push((name, "the tool's edit (US-9, US-10)".into()));
+            checks.push((name, "the tool's edit (US-9, US-10, US-21)".into()));
         }
     }
     let width = checks.iter().map(|(n, _)| n.len()).max().unwrap_or(10);
@@ -469,12 +469,13 @@ fn tool_day_edit(dt: &Darktable, source: &Path, work: &Path, name: &str) -> Resu
     Ok(xmp)
 }
 
-/// The reference set's aurora photos (US-7's check), with their scene ratio (US-10).
+/// The reference set's aurora photos (US-7's check) with their scene ratio (US-10), and its
+/// night photos without aurora and without a bright sky (ratio `None`, US-21).
 fn aurora_photos(
     cfg: &Config,
     dirs: &Dirs,
     sources: &[(RefPhoto, PathBuf)],
-) -> Vec<(RefPhoto, PathBuf, f64)> {
+) -> Vec<(RefPhoto, PathBuf, Option<f64>)> {
     let check = Darktable::prepare(
         &cfg.darktable.cli,
         &cfg.darktable_config_dir().unwrap_or_default(),
@@ -493,18 +494,28 @@ fn aurora_photos(
         })
         .filter_map(|(p, s)| {
             let img = check.render(s).ok()?;
-            crate::aurora::has_aurora(&img)
-                .then(|| (p.clone(), s.clone(), crate::aurora_edit::scene_ratio(&img)))
+            if crate::aurora::has_aurora(&img) {
+                Some((
+                    p.clone(),
+                    s.clone(),
+                    Some(crate::aurora_edit::scene_ratio(&img)),
+                ))
+            } else if crate::night_edit::bright_sky(&img) {
+                None
+            } else {
+                Some((p.clone(), s.clone(), None))
+            }
         })
         .collect()
 }
 
-/// The tool's aurora edit of `source` (neutral blue) on darktable's defaults; returns its sidecar.
+/// The tool's aurora edit (neutral blue; `ratio` is the scene ratio) or, without a ratio, its
+/// night edit of `source` on darktable's defaults; returns its sidecar.
 fn tool_aurora_edit(
     dt: &Darktable,
     finder: &crate::horizon::Finder,
     source: &Path,
-    ratio: f64,
+    ratio: Option<f64>,
     work: &Path,
     name: &str,
 ) -> Result<PathBuf> {
@@ -513,6 +524,16 @@ fn tool_aurora_edit(
     let xmp = work.join(format!("{name}.xmp"));
     let probe = work.join(format!("{name}.pfm"));
     let (line, _) = finder.find(source)?;
+    let Some(ratio) = ratio else {
+        let solved =
+            crate::night_edit::solve(crate::day_edit::EMPTY_HISTORY, &line, &mut |text, size| {
+                std::fs::write(&xmp, text)?;
+                dt.render(source, &xmp, &probe, size)?;
+                crate::aurora::load_pfm(&probe)
+            })?;
+        std::fs::write(&xmp, &solved.xmp)?;
+        return Ok(xmp);
+    };
     let solved = aurora_edit::solve(
         crate::day_edit::EMPTY_HISTORY,
         aurora_edit::SkyColour::NeutralBlue,

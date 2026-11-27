@@ -41,6 +41,18 @@ enum Command {
         #[arg(required = true)]
         photos: Vec<PathBuf>,
     },
+    /// Try the night edit on raw photos (development aid, US-21)
+    #[command(hide = true)]
+    NightEdit {
+        /// Directory for the edits (<photo>.xmp) and their renders (<photo>.jpg)
+        #[arg(long)]
+        out: PathBuf,
+        /// History to start from instead of darktable's defaults (an import's sidecar)
+        #[arg(long)]
+        base: Option<PathBuf>,
+        #[arg(required = true)]
+        photos: Vec<PathBuf>,
+    },
     /// Find where the land meets the sky in raw photos and print it (US-23)
     Horizon {
         /// Write a preview per photo into this directory (sky tinted blue, skyline yellow)
@@ -83,6 +95,9 @@ fn main() -> ExitCode {
         Command::Selftest(Selftest::Accept) => selftest::accept(&cfg),
         Command::Process { handover, plan } => run_process(&cfg, &handover, &plan),
         Command::Horizon { preview, photos } => run_horizon(&cfg, preview.as_deref(), &photos),
+        Command::NightEdit { out, base, photos } => {
+            run_night_edit(&cfg, &out, base.as_deref(), &photos)
+        }
         Command::AuroraEdit {
             violet,
             out,
@@ -218,6 +233,73 @@ fn run_aurora_edit(
             solved.params.wb.0,
             solved.params.wb.1,
             solved.params.land.as_ref().map(|l| l.1),
+            solved.reached
+        );
+    }
+    Ok(true)
+}
+
+fn run_night_edit(
+    cfg: &config::Config,
+    out: &std::path::Path,
+    base: Option<&std::path::Path>,
+    photos: &[PathBuf],
+) -> anyhow::Result<bool> {
+    use photoflow::night_edit;
+    let base = match base {
+        Some(b) => std::fs::read_to_string(b)?,
+        None => photoflow::day_edit::EMPTY_HISTORY.to_string(),
+    };
+    let data = cfg.data_dir()?;
+    let work = data.join("night-edit");
+    let prep = |d: &str| {
+        photoflow::darktable::Darktable::prepare(
+            &cfg.darktable.cli,
+            &cfg.darktable_config_dir()?,
+            &work.join(d),
+        )
+    };
+    let finder = photoflow::horizon::Finder::new(
+        prep("hz")?,
+        &work.join("hz-renders"),
+        &data.join("models"),
+    )?;
+    let check = photoflow::classify::AuroraCheck::new(prep("check")?, &work.join("check-renders"))?;
+    let dt = prep("solve")?;
+    std::fs::create_dir_all(out)?;
+    for raw in photos {
+        let name = raw
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        if night_edit::bright_sky(&check.render(raw)?) {
+            println!("{}: bright sky, no automatic edit", raw.display());
+            continue;
+        }
+        let (line, _) = finder.find(raw)?;
+        let x = work.join(format!("{name}.solve.xmp"));
+        let o = work.join(format!("{name}.solve.pfm"));
+        let mut n = 0;
+        let mut render = |xmp: &str, size: u32| {
+            n += 1;
+            std::fs::write(&x, xmp)?;
+            dt.render(raw, &x, &o, size)?;
+            photoflow::aurora::load_pfm(&o)
+        };
+        let solved = night_edit::solve(&base, &line, &mut render)?;
+        let stem = raw.file_stem().unwrap_or_default().to_string_lossy();
+        let xmp = out.join(format!("{stem}.xmp"));
+        std::fs::write(&xmp, &solved.xmp)?;
+        dt.render(raw, &xmp, &out.join(format!("{stem}.jpg")), 1600)?;
+        let p = &solved.params;
+        println!(
+            "{}: ev {:.2} wb {:.2}/{:.2} land {:?} reached {} ({n} renders)",
+            raw.display(),
+            p.ev,
+            p.wb.0,
+            p.wb.1,
+            p.land,
             solved.reached
         );
     }

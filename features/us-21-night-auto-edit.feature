@@ -1,4 +1,3 @@
-@wip
 Feature: US-21 — Night auto-edit
   As the owner, I want night photos without aurora — stars, the Milky Way, moonlit mountains,
   city lights below — edited automatically close to my favourite night edits, so I only correct
